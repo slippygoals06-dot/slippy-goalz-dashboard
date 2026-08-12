@@ -452,7 +452,7 @@ function MetaRow({ icon: Icon, label, value, t }) {
 function WaitlistSkeleton() {
   const { theme: t } = useTheme();
   return (
-    <PageShell title="Waitlist" subtitle="Customers waiting for an available repair slot.">
+    <PageShell title="Waitlist" subtitle="Customers waiting for an open time.">
       <style>{`
         .sk-wave{position:relative;overflow:hidden;background:${t.name === "dark" ? "rgba(255,255,255,0.04)" : "rgba(15,17,21,0.04)"};border:1px solid ${t.border}}
         .sk-wave::after{content:"";position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(90deg,transparent,${t.name === "dark" ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.7)"},transparent);animation:skWave 1.4s ease-in-out infinite}
@@ -1053,7 +1053,7 @@ export default function Waitlist() {
   function notifyCustomer(entry) {
     markNotified(entry);
     const msg = encodeURIComponent(
-      `Hi ${entry.Name || "there"}, a repair slot may be available soon${
+      `Hi ${entry.Name || "there"}, a time may be available soon${
         entry.nextSlot?.Time ? ` around ${entry.nextSlot.Time}` : ""
       }. Reply to confirm your booking.`
     );
@@ -1154,7 +1154,7 @@ export default function Waitlist() {
   return (
     <PageShell
       title="Waitlist"
-      subtitle="Customers waiting for an available repair slot."
+      subtitle="Customers waiting for an open time."
       wide
       actions={
         <>
@@ -1411,7 +1411,7 @@ export default function Waitlist() {
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search by customer, phone, device, service, or preferred day…"
+          placeholder="Search by name, phone, or preferred day…"
           style={{
             width: "100%",
             height: 52,

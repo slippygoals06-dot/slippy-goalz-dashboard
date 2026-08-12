@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useStore } from "../store/useStore";
 import { useTheme, primaryBtnStyle, secondaryBtnStyle } from "../context/ThemeContext";
 import { FabSparkle, CloseIcon } from "./icons";
+import { API_URL } from "../config";
 
 const QUICK_PROMPTS = [
   "Today's bookings?",
@@ -60,7 +61,7 @@ export default function OwnerBot() {
         content: m.content,
       }));
 
-      const res = await fetch("https://irepair-backend-production-2418.up.railway.app/chat/owner", {
+      const res = await fetch(`${API_URL}/chat/owner`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

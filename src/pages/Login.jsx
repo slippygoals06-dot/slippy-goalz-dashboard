@@ -23,32 +23,33 @@ import {
   BRAND_RING,
   BRAND_SOFT_BG,
 } from "../constants/brand";
+import { API_URL } from "../config";
 
 const FEATURES = [
   {
     icon: Bot,
-    title: "AI Booking Assistant",
-    desc: "Handle enquiries and bookings with calm, on-brand replies.",
+    title: "AI Booking Help",
+    desc: "Answer customer questions and take bookings automatically.",
   },
   {
     icon: Calendar,
-    title: "Smart Scheduling",
-    desc: "Keep slots, waitlists and capacity in perfect balance.",
+    title: "Easy Scheduling",
+    desc: "See open times, block busy hours, and avoid double booking.",
   },
   {
     icon: FileText,
-    title: "Automated Invoices",
-    desc: "Create, track and collect payments without the friction.",
+    title: "Simple Invoices",
+    desc: "Create bills and track who has paid — cash or online.",
   },
   {
     icon: Users,
-    title: "Customer CRM",
-    desc: "Every conversation, device and history in one place.",
+    title: "Customer Records",
+    desc: "Keep every booking, chat, and history in one place.",
   },
   {
     icon: BarChart3,
-    title: "Business Analytics",
-    desc: "See what drives revenue — clearly and quietly.",
+    title: "Clear Reports",
+    desc: "See bookings and revenue at a glance.",
   },
 ];
 
@@ -84,7 +85,7 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const res = await fetch("https://irepair-backend-production-2418.up.railway.app/auth/login", {
+      const res = await fetch(`${API_URL}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
@@ -674,7 +675,7 @@ export default function Login() {
           </div>
 
           <h1 className="login-hero-title login-enter login-enter-h2">
-            Run your repair shop.
+            Manage your business.
             <span>Powered by AI.</span>
           </h1>
 
@@ -684,7 +685,7 @@ export default function Login() {
           </p>
 
           <p className="login-trust-line login-enter login-enter-h4">
-            Trusted by modern repair businesses.
+            Trusted by modern growing businesses.
           </p>
 
           <div className="login-features" role="list">
@@ -724,7 +725,7 @@ export default function Login() {
 
             <h2 className="login-welcome login-enter login-enter-a2">Welcome back</h2>
             <p className="login-welcome-sub login-enter login-enter-a3">
-              Sign in to continue managing your repair business.
+              Sign in to continue managing your business.
             </p>
 
             <form className="login-form" onSubmit={handleLogin} noValidate>

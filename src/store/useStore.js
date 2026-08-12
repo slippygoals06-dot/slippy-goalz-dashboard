@@ -2,9 +2,7 @@ import { create } from "zustand";
 import { useNotifStore } from "./useNotifStore";
 import { devtools } from "zustand/middleware";
 import { toApiPayload } from "../utils/bookingFields";
-
-const API =
-  import.meta.env.VITE_API_URL || "https://irepair-backend-production-2418.up.railway.app";
+import { API_URL as API } from "../config";
 
 let fetchingRef = false;
 let prevPending = null;

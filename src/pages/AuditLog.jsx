@@ -581,7 +581,7 @@ function ChangeCompare({ from, to, t }) {
 
 function AuditSkeleton({ t }) {
   return (
-    <PageShell title="Audit Log" subtitle="Track every important action across your repair shop.">
+    <PageShell title="Audit Log" subtitle="See important actions taken in your account.">
       <style>{`
         .sk-wave{position:relative;overflow:hidden;background:${t.name === "dark" ? "rgba(255,255,255,0.04)" : "rgba(15,17,21,0.04)"};border:1px solid ${t.border}}
         .sk-wave::after{content:"";position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(90deg,transparent,${t.name === "dark" ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.7)"},transparent);animation:skWave 1.4s ease-in-out infinite}
@@ -739,7 +739,7 @@ export default function AuditLog() {
       lines.push({ text: "Shop is quiet — no actions recorded today yet.", tone: "info" });
     }
     if (lines.length === 0) {
-      lines.push({ text: "Activity looks healthy across your repair shop.", tone: "ok" });
+      lines.push({ text: "Activity looks normal.", tone: "ok" });
     }
     return lines.slice(0, 5);
   }, [metrics]);
@@ -874,7 +874,7 @@ export default function AuditLog() {
 
   if (error) {
     return (
-      <PageShell title="Audit Log" subtitle="Track every important action across your repair shop." actions={headerActions}>
+      <PageShell title="Audit Log" subtitle="See important actions taken in your account." actions={headerActions}>
         <div
           style={{
             ...cardStyle(t),
@@ -1029,11 +1029,11 @@ export default function AuditLog() {
 
   if (events.length === 0) {
     return (
-      <PageShell title="Audit Log" subtitle="Track every important action across your repair shop." actions={headerActions}>
+      <PageShell title="Audit Log" subtitle="See important actions taken in your account." actions={headerActions}>
         <EmptyState
           illustration="audit"
           title="No activity yet."
-          subtitle="All important actions performed inside your repair shop will appear here automatically."
+          subtitle="Important actions will show up here automatically."
           action="View Dashboard"
           onAction={() => navigate("/")}
         />
@@ -1046,7 +1046,7 @@ export default function AuditLog() {
   const details = selected?.details || {};
 
   return (
-    <PageShell title="Audit Log" subtitle="Track every important action across your repair shop." actions={headerActions}>
+    <PageShell title="Audit Log" subtitle="See important actions taken in your account." actions={headerActions}>
       <style>{`
         .audit-kpi { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 16px; }
         .audit-card {

@@ -554,7 +554,7 @@ export default function Dashboard() {
       ? `${needsAttention} booking${needsAttention === 1 ? "" : "s"} need your attention.`
       : todayPending > 0
         ? `${todayPending} customer${todayPending === 1 ? "" : "s"} awaiting confirmation today.`
-        : "Your repair shop is running smoothly today.";
+        : "Everything looks good today.";
 
   return (
     <ContentReveal>
@@ -941,7 +941,7 @@ export default function Dashboard() {
         </div>
 
         <div style={{ ...panel, padding: "28px 28px 24px", display: "flex", flexDirection: "column" }}>
-          <SectionLabel title="Job status" subtitle="Distribution in range" t={t} />
+          <SectionLabel title="Booking status" subtitle="Distribution in range" t={t} />
           {statusCounts.length > 0 ? (
             <div className="dash-job-status" style={{ display: "flex", alignItems: "center", gap: 28, flex: 1, minHeight: 240 }}>
               <div style={{ position: "relative", width: 168, height: 168, flexShrink: 0 }}>

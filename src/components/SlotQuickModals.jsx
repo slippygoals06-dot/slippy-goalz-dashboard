@@ -113,7 +113,7 @@ export function AddSlotModal({ open, onClose, defaultDate, onSubmit }) {
       open={open}
       onClose={() => !saving && onClose?.()}
       title="Add slot"
-      subtitle="Open a new bookable time on the pitch calendar."
+      subtitle="Add a new time customers can book."
       footer={
         <>
           <button type="button" disabled={saving} onClick={() => !saving && onClose?.()} style={{ ...secondaryBtnStyle(t), padding: "10px 16px", fontFamily: "inherit" }}>
@@ -186,7 +186,7 @@ export function BlockTimeModal({ open, onClose, defaultDate, daySlots = [], onSu
       open={open}
       onClose={() => !saving && onClose?.()}
       title="Block time"
-      subtitle={defaultDate ? `Keep ${defaultDate} closed for walk-ins or maintenance.` : "Mark a time as unavailable."}
+      subtitle={defaultDate ? `Close this time so customers cannot book it.` : "Close a time so customers cannot book it."}
       footer={
         <>
           <button type="button" disabled={saving} onClick={() => !saving && onClose?.()} style={{ ...secondaryBtnStyle(t), padding: "10px 16px", fontFamily: "inherit" }}>
@@ -300,7 +300,7 @@ export function ExtraSlotModal({ open, onClose, defaultDate, daySlots = [], onSu
       open={open}
       onClose={() => !saving && onClose?.()}
       title="Open extra slot"
-      subtitle={defaultDate ? `Add one more bookable time on ${defaultDate}.` : "Select a day on the calendar first."}
+      subtitle={defaultDate ? `Add one more open time on ${defaultDate}.` : "First tap a day on the calendar."}
       footer={
         <>
           <button type="button" disabled={saving} onClick={() => !saving && onClose?.()} style={{ ...secondaryBtnStyle(t), padding: "10px 16px", fontFamily: "inherit" }}>
@@ -369,7 +369,7 @@ export function CopyScheduleModal({ open, onClose, fromDate, onSubmit }) {
       open={open}
       onClose={() => !saving && onClose?.()}
       title="Copy schedule"
-      subtitle={fromDate ? `Duplicate times from ${fromDate} onto another day.` : "Select a source day on the calendar first."}
+      subtitle={fromDate ? `Copy this day's times to another date.` : "First tap the day you want to copy."}
       footer={
         <>
           <button type="button" disabled={saving} onClick={() => !saving && onClose?.()} style={{ ...secondaryBtnStyle(t), padding: "10px 16px", fontFamily: "inherit" }}>
@@ -445,8 +445,8 @@ export function EditCapacityModal({ open, onClose, defaultDate, daySlots = [], o
     <ModalShell
       open={open}
       onClose={() => !saving && onClose?.()}
-      title="Edit capacity"
-      subtitle={defaultDate ? `Add standard times for ${defaultDate}, or reopen blocked slots.` : "Select a day first."}
+      title="Set times"
+      subtitle={defaultDate ? `Choose which times are open on ${defaultDate}.` : "First tap a day on the calendar."}
       maxWidth={520}
       footer={
         <>
@@ -454,7 +454,7 @@ export function EditCapacityModal({ open, onClose, defaultDate, daySlots = [], o
             Done
           </button>
           <button type="button" disabled={saving || !defaultDate} onClick={save} {...primaryBtnHoverProps(t)} style={{ ...primaryBtnStyle(t), padding: "10px 16px", fontFamily: "inherit" }}>
-            {saving ? "Saving…" : "Add selected times"}
+            {saving ? "Saving…" : "Save times"}
           </button>
         </>
       }
@@ -462,7 +462,7 @@ export function EditCapacityModal({ open, onClose, defaultDate, daySlots = [], o
       <div style={{ display: "grid", gap: 18 }}>
         {daySlots.length > 0 && (
           <div>
-            <Label t={t}>Existing slots — tap to toggle Available / Blocked</Label>
+            <Label t={t}>Current times — tap to open or close</Label>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
               {[...daySlots].sort((a, b) => String(a.Time).localeCompare(String(b.Time))).map((s) => {
                 const id = String(s.id ?? s.ID);
@@ -495,7 +495,7 @@ export function EditCapacityModal({ open, onClose, defaultDate, daySlots = [], o
           </div>
         )}
         <div>
-          <Label t={t}>Add standard times</Label>
+          <Label t={t}>Add common times</Label>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
             {DEFAULT_TIMES.map((tm) => {
               const taken = existing.has(tm);

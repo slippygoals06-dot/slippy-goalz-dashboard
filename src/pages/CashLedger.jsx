@@ -287,7 +287,7 @@ function CashSkeleton() {
   return (
     <PageShell
       title="Cash Ledger"
-      subtitle="Track every cash movement across your repair shop."
+      subtitle="Track cash in and cash out."
     >
       <style>{`
         .sk-wave{position:relative;overflow:hidden;background:${t.name === "dark" ? "rgba(255,255,255,0.04)" : "rgba(15,17,21,0.04)"};border:1px solid ${t.border}}
@@ -787,7 +787,7 @@ export default function CashLedger() {
   return (
     <PageShell
       title="Cash Ledger"
-      subtitle="Track every cash movement across your repair shop."
+      subtitle="Track cash in and cash out."
       actions={
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
           <button

@@ -258,7 +258,7 @@ function AddBookingModal({ open, onClose, onSaved }) {
               Add booking
             </h2>
             <p style={{ margin: "6px 0 0", fontSize: 13, color: t.textMuted, fontWeight: 400 }}>
-              Create a pitch booking
+              Add a new customer booking
             </p>
           </div>
           <button
@@ -1123,7 +1123,7 @@ function BookingDrawer({
 function BookingsSkeleton() {
   const { theme: t } = useTheme();
   return (
-    <PageShell title="Bookings" subtitle="Manage pitch bookings and customer workflow.">
+    <PageShell title="Bookings" subtitle="See and manage all customer bookings.">
       <style>{`
         .sk-wave{position:relative;overflow:hidden;background:${t.name === "dark" ? "rgba(255,255,255,0.04)" : "rgba(15,17,21,0.04)"};border:1px solid ${t.border}}
         .sk-wave::after{content:"";position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(90deg,transparent,${t.name === "dark" ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.7)"},transparent);animation:skWave 1.4s ease-in-out infinite}
@@ -1329,7 +1329,7 @@ export default function Bookings() {
   return (
     <PageShell
       title="Bookings"
-      subtitle="Manage pitch bookings and customer workflow."
+      subtitle="See and manage all customer bookings."
       actions={
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
           <button
@@ -1339,7 +1339,7 @@ export default function Bookings() {
               const url = `${window.location.origin}/book`;
               try {
                 await navigator.clipboard.writeText(url);
-                showToast("Public booking link copied");
+                showToast("Booking link copied — share it with customers");
               } catch {
                 showToast(url, "info");
               }
@@ -1357,7 +1357,7 @@ export default function Bookings() {
             }}
           >
             <Link2 size={15} strokeWidth={2} />
-            Public link
+            Share booking link
           </button>
           <button
             type="button"
@@ -1507,7 +1507,7 @@ export default function Bookings() {
           t={t}
           emphasize
         />
-        <WalletCard label="VIP customers" value={summary.vip.toLocaleString()} trend="Lifetime value tier" icon={Eye} t={t} />
+        <WalletCard label="VIP customers" value={summary.vip.toLocaleString()} trend="Repeat customers" icon={Eye} t={t} />
       </div>
 
       {/* Spotlight search */}
@@ -1632,7 +1632,7 @@ export default function Bookings() {
         <EmptyState
           illustration="bookings"
           title="No bookings found"
-          subtitle={search || filter !== "All" ? "Try a different search or filter" : "Create your first repair appointment"}
+          subtitle={search || filter !== "All" ? "Try a different search or filter" : "Add your first booking to get started"}
           action="Add Booking"
           onAction={() => setAddOpen(true)}
         />
@@ -1651,7 +1651,7 @@ export default function Bookings() {
               <thead>
                 <tr>
                   <th className="bk-sticky-col" style={{ ...TH, minWidth: 240 }}>Customer</th>
-                  <th style={TH}>Service</th>
+                  <th style={TH}>Players</th>
                   <th style={TH}>Schedule</th>
                   <th style={TH}>Source</th>
                   <th style={TH}>Status</th>

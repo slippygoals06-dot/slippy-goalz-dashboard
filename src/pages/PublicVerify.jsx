@@ -3,8 +3,7 @@ import { useParams } from "react-router-dom";
 import { BUSINESS_NAME } from "../constants/brand";
 import { BrandSparkle } from "../components/icons";
 import { useTheme } from "../context/ThemeContext";
-
-const API = "https://irepair-backend-production-2418.up.railway.app";
+import { API_URL as API } from "../config";
 
 function formatDate(value) {
   if (!value) return "—";

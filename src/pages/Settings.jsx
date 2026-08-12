@@ -118,7 +118,7 @@ const NAV = [
 const DEFAULT_AI = {
   enabled: true,
   languages: "English, Urdu",
-  greeting: "Hi! Welcome to Slippy Goalz — how can I help with your repair today?",
+  greeting: "Hi! Welcome to Slippy Goalz — how can I help you today?",
   bookingBehaviour: "confirm_slots",
   escalation: true,
   knowledgeBase: true,
@@ -881,7 +881,7 @@ export default function Settings() {
   function renderBusiness() {
     return (
       <>
-        <SectionIntro title="Business Profile" subtitle="How customers and staff recognize your repair shop." />
+        <SectionIntro title="Business Profile" subtitle="Your business name and contact details." />
         <SettingCard title="Business information" description="Shown on invoices, booking pages, and customer messages." status="Editable" statusTone="success">
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }} className="set-field-grid">
             <Field label="Shop name">
@@ -1363,7 +1363,7 @@ export default function Settings() {
           />
           <IntegrationCard
             name="Instagram"
-            description="DM intake for repair enquiries."
+            description="Receive booking messages from Instagram."
             status="Not connected"
             statusTone="neutral"
             lastSync="Never"
@@ -1591,7 +1591,7 @@ export default function Settings() {
   return (
     <PageShell
       title="Settings"
-      subtitle="Manage your repair shop, AI assistant and account preferences."
+      subtitle="Update your business, assistant, and account settings."
       actions={
         <>
           <Button variant="secondary" size="sm" onClick={exportSettings}>

@@ -1,8 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { BUSINESS_NAME } from "../constants/brand";
 import logoSrc from "../assets/logo.png";
-
-const API = "https://irepair-backend-production-2418.up.railway.app";
+import { API_URL as API } from "../config";
 const BRAND_RED = "#E11D48";
 const BRAND_RED_HOVER = "#BE123C";
 const SURFACE = "#13151A";

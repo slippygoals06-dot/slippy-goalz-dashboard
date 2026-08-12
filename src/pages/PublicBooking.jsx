@@ -2,9 +2,7 @@ import { useState, useEffect } from "react";
 import { useTheme } from "../context/ThemeContext";
 import { BUSINESS_NAME } from "../constants/brand";
 import { toApiPayload, PAYMENT_MODES, joinName } from "../utils/bookingFields";
-
-const API =
-  import.meta.env.VITE_API_URL || "https://irepair-backend-production-2418.up.railway.app";
+import { API_URL as API } from "../config";
 
 function formatDateLabel(iso) {
   if (!iso) return "";
@@ -200,7 +198,7 @@ export default function PublicBooking() {
             boxShadow: t.cardShadow,
           }}
         >
-          <div style={{ fontSize: 28, fontWeight: 600, marginBottom: 10 }}>Request sent</div>
+          <div style={{ fontSize: 28, fontWeight: 600, marginBottom: 10 }}>Booking sent</div>
           <p style={{ margin: 0, color: t.textMuted, lineHeight: 1.5, fontSize: 14 }}>
             Thanks {joinName(form.firstName, form.lastName)}. Your booking for{" "}
             <strong>{formatDateLabel(form.date)}</strong> at <strong>{form.time}</strong> is with the{" "}
@@ -227,9 +225,9 @@ export default function PublicBooking() {
             <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: 1.2, color: t.accent, textTransform: "uppercase" }}>
               {BUSINESS_NAME}
             </div>
-            <h1 style={{ margin: "8px 0 0", fontSize: 28, fontWeight: 600, letterSpacing: -0.6 }}>Book a slot</h1>
+            <h1 style={{ margin: "8px 0 0", fontSize: 28, fontWeight: 600, letterSpacing: -0.6 }}>Book a time</h1>
             <p style={{ margin: "8px 0 0", color: t.textMuted, fontSize: 14 }}>
-              Open booking — requests show up in the admin portal automatically.
+              Fill in your details. We will confirm your booking soon.
             </p>
           </div>
           <button
@@ -325,14 +323,14 @@ export default function PublicBooking() {
           </div>
 
           <div>
-            <label style={label}>Available slots</label>
+            <label style={label}>Open times</label>
             {loadingSlots ? (
               <div style={{ fontSize: 13, color: t.textMuted }}>Loading availability…</div>
             ) : slotsError ? (
               <div style={{ fontSize: 13, color: t.textMuted }}>{slotsError}</div>
             ) : availableDates.length === 0 ? (
               <div style={{ fontSize: 13, color: t.textMuted }}>
-                No listed slots right now — pick any date and time below.
+                No set times yet — choose any date and time below.
               </div>
             ) : (
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
@@ -481,7 +479,7 @@ export default function PublicBooking() {
               fontFamily: "inherit",
             }}
           >
-            {submitting ? "Sending…" : "Request booking"}
+            {submitting ? "Sending…" : "Submit booking"}
           </button>
         </form>
 

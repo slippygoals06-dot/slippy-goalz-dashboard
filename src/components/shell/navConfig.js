@@ -1,9 +1,9 @@
 import { NAV_ITEMS } from "../../constants";
 
 export const NAV_GROUPS = [
-  { label: "Operations", paths: ["/", "/bookings", "/invoices", "/cash", "/slots", "/parts/scan"] },
-  { label: "Pipeline", paths: ["/leads", "/waitlist", "/chats"] },
-  { label: "System", paths: ["/analytics", "/audit", "/security", "/settings"] },
+  { label: "Daily work", paths: ["/", "/bookings", "/invoices", "/cash", "/slots", "/parts/scan"] },
+  { label: "Customers", paths: ["/leads", "/waitlist", "/chats"] },
+  { label: "More", paths: ["/analytics", "/audit", "/security", "/settings"] },
 ];
 
 export const MOBILE_BP = 860;

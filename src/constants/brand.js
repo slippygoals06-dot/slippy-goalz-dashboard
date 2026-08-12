@@ -1,7 +1,7 @@
 /** Client shop branding — used on login, intro, and shell chrome. */
 export const BUSINESS_NAME = "Slippy Goalz";
-export const BUSINESS_SUBTITLE = "OWNER PORTAL";
-export const BUSINESS_TAGLINE = "Owner portal — sign in to continue";
+export const BUSINESS_SUBTITLE = "BUSINESS PORTAL";
+export const BUSINESS_TAGLINE = "Sign in to manage your business";
 
 /**
  * Brand rose — refined, expensive, never neon.

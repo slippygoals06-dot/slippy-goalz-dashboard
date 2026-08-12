@@ -1,5 +1,4 @@
-const API_URL =
-  import.meta.env.VITE_API_URL || "https://irepair-backend-production-2418.up.railway.app";
+import { API_URL } from "./config";
 
 // Store token in localStorage
 const getToken = () => localStorage.getItem("slippy_token");
@@ -19,12 +18,15 @@ async function apiFetch(endpoint, options = {}) {
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     const detail = err.detail;
-    const msg = typeof detail === "string"
-      ? detail
-      : Array.isArray(detail)
-        ? detail.map(d => d.msg || JSON.stringify(d)).join(", ")
-        : `API error ${res.status}`;
-    throw new Error(msg);
+    const msg =
+      typeof detail === "string"
+        ? detail
+        : Array.isArray(detail)
+          ? detail.map((d) => d.msg || JSON.stringify(d)).join(", ")
+          : `API error ${res.status}`;
+    const error = new Error(msg);
+    error.status = res.status;
+    throw error;
   }
   return res.json();
 }
@@ -43,9 +45,12 @@ export async function login(username, password) {
 export const getBookings = () => apiFetch("/bookings/");
 export const getBookingHistory = (bookingId) =>
   apiFetch(`/bookings/${encodeURIComponent(bookingId)}/history`);
-export const createBooking = (booking) => apiFetch("/bookings/", { method: "POST", body: JSON.stringify(booking) });
-export const updateBooking = (id, data) => apiFetch(`/bookings/${id}`, { method: "PUT", body: JSON.stringify(data) });
-export const deleteBooking = (id) => apiFetch(`/bookings/${id}`, { method: "DELETE" });
+export const createBooking = (booking) =>
+  apiFetch("/bookings/", { method: "POST", body: JSON.stringify(booking) });
+export const updateBooking = (id, data) =>
+  apiFetch(`/bookings/${id}`, { method: "PUT", body: JSON.stringify(data) });
+export const deleteBooking = (id) =>
+  apiFetch(`/bookings/${id}`, { method: "DELETE" });
 
 // Slots
 export const getSlots = () => apiFetch("/slots/");
@@ -56,21 +61,30 @@ export const createSlotsBulk = (data) =>
 export const copySlotsDay = (data) =>
   apiFetch("/slots/copy-day", { method: "POST", body: JSON.stringify(data) });
 export const updateSlot = (id, data) =>
-  apiFetch(`/slots/${encodeURIComponent(id)}`, { method: "PUT", body: JSON.stringify(data) });
+  apiFetch(`/slots/${encodeURIComponent(id)}`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
 export const deleteSlot = (id) =>
   apiFetch(`/slots/${encodeURIComponent(id)}`, { method: "DELETE" });
 
 // Leads
 export const getLeads = () => apiFetch("/leads/");
-export const createLead = (lead) => apiFetch("/leads/", { method: "POST", body: JSON.stringify(lead) });
+export const createLead = (lead) =>
+  apiFetch("/leads/", { method: "POST", body: JSON.stringify(lead) });
 export const deleteLead = (id) =>
   apiFetch(`/leads/${encodeURIComponent(id)}`, { method: "DELETE" });
 
 // Chat
 export const getChatSessions = (limit = 100) =>
   apiFetch(`/chat/sessions?limit=${encodeURIComponent(limit)}`);
-export const ownerChat = (messages) => apiFetch("/chat/owner", { method: "POST", body: JSON.stringify({ messages }) });
-export const customerChat = (message) => apiFetch("/chat/customer", { method: "POST", body: JSON.stringify({ message }) });
+export const ownerChat = (messages) =>
+  apiFetch("/chat/owner", { method: "POST", body: JSON.stringify({ messages }) });
+export const customerChat = (message) =>
+  apiFetch("/chat/customer", {
+    method: "POST",
+    body: JSON.stringify({ message }),
+  });
 
 // Invoices
 export const getInvoices = () => apiFetch("/invoices/");
@@ -106,7 +120,6 @@ export async function downloadInvoicePdf(invoiceId, filename) {
   URL.revokeObjectURL(url);
 }
 
-/** Open invoice PDF in a new tab (preview) — same blob source as download. */
 export async function openInvoicePdf(invoiceId) {
   const blob = await fetchInvoicePdfBlob(invoiceId);
   const url = URL.createObjectURL(blob);
@@ -115,7 +128,6 @@ export async function openInvoicePdf(invoiceId) {
     URL.revokeObjectURL(url);
     throw new Error("Popup blocked — allow popups to preview invoices");
   }
-  // Revoke after the tab has had time to load the blob
   setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
@@ -155,21 +167,18 @@ export const unlockWithPassword = (password) =>
     body: JSON.stringify({ password }),
   });
 
-// TEMPORARY — WhatsApp Cloud API smoke test (remove with Settings test UI)
 export const testWhatsApp = (to, templateName = "hello_world") =>
   apiFetch("/test-whatsapp", {
     method: "POST",
     body: JSON.stringify({ to, template_name: templateName }),
   });
 
-/** Inbox reply — free-form WhatsApp text (requires open customer-care window). */
 export const sendWhatsAppText = (to, text) =>
   apiFetch("/whatsapp/send", {
     method: "POST",
     body: JSON.stringify({ to, text }),
   });
 
-// WhatsApp integration (Connect from Inbox)
 export const getWhatsAppIntegrationStatus = () =>
   apiFetch("/integrations/whatsapp/status");
 
@@ -182,7 +191,6 @@ export const connectWhatsApp = (phoneNumberId, accessToken) =>
     }),
   });
 
-// Parts chain-of-custody
 export const receiveParts = (body) =>
   apiFetch("/parts/receive", {
     method: "POST",
@@ -194,3 +202,5 @@ export const installParts = (body) =>
     method: "POST",
     body: JSON.stringify(body),
   });
+
+export { API_URL };

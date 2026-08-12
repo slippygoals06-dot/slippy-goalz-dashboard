@@ -1197,7 +1197,7 @@ export default function Analytics() {
       <PageShell title="Analytics" subtitle="Understand the performance of your repair business." actions={headerActions}>
         <EmptyState
           illustration="default"
-          title="Analytics will appear as your repair shop grows."
+          title="Reports will appear as you get more bookings."
           subtitle="Bookings, invoices and conversations automatically generate insights."
         />
       </PageShell>
@@ -1370,7 +1370,7 @@ export default function Analytics() {
                 maxWidth: 720,
               }}
             >
-              {analytics.briefing[0]?.text || "Your repair shop is running smoothly."}
+              {analytics.briefing[0]?.text || "Everything looks good."}
             </p>
             <div style={{ marginTop: 24, display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap" }}>
               <span style={{ fontSize: 13, color: t.textMuted }}>Estimated monthly revenue</span>

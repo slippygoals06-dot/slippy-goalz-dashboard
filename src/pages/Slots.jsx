@@ -176,7 +176,7 @@ function SlotsSkeleton() {
   return (
     <PageShell
       title="Slots"
-      subtitle="Manage pitch availability and booking capacity."
+      subtitle="Set open times for bookings."
     >
       <style>{`
         .sk-wave{position:relative;overflow:hidden;background:${t.name === "dark" ? "rgba(255,255,255,0.04)" : "rgba(15,17,21,0.04)"};border:1px solid ${t.border}}
@@ -267,18 +267,18 @@ function buildAiInsights(slots, slotsByDate, metrics) {
 
   if (metrics.utilisation >= 80) {
     bullets.push({
-      text: "Recommend opening two extra pitch slots on the next busy day.",
+      text: "Busy day ahead — add a couple of extra times.",
       tone: "warn",
     });
   } else if (metrics.available > 10) {
     bullets.push({
-      text: "Plenty of room — promote this day in WhatsApp or Instagram.",
+      text: "This day has free times — share your booking link to fill it.",
       tone: "ok",
     });
   }
 
   if (bullets.length === 0) {
-    bullets.push({ text: "No strong capacity signals yet — keep monitoring this week.", tone: "info" });
+    bullets.push({ text: "Keep an eye on this week — add more times if it gets busy.", tone: "info" });
   }
 
   return bullets.slice(0, 4);
@@ -559,7 +559,7 @@ function DayPanel({
     } else if (available <= 2 && daySlots.length > 0) {
       list.push("Capacity is tight — block non-urgent work or add a slot.");
     } else if (available >= 6) {
-      list.push("Plenty of room — promote this day in WhatsApp or Instagram.");
+      list.push("This day has free times — share your booking link to fill it.");
     }
     if (booked > 0) {
       list.push(`${booked} booking${booked === 1 ? "" : "s"} already scheduled.`);
@@ -593,10 +593,10 @@ function DayPanel({
           <circle cx="52" cy="40" r="3" fill="currentColor" opacity="0.15" />
         </svg>
         <div style={{ fontSize: 15, fontWeight: 500, color: t.textPrimary, marginBottom: 8 }}>
-          Select a day to view schedule
+          Tap a day to see its times
         </div>
         <div style={{ fontSize: 13, color: t.textMuted, maxWidth: 240, lineHeight: 1.5 }}>
-          Tap any date on the calendar to see availability, bookings, and suggested optimisations.
+          Choose a date to see open times, booked slots, and quick actions.
         </div>
       </div>
     );
@@ -648,7 +648,7 @@ function DayPanel({
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
             {[
-              ["Pitch", "Slippy Goalz"],
+              ["Venue", "Slippy Goalz"],
               ["Business hours", hours],
               ["Total slots", String(daySlots.length)],
             ].map(([label, value], i, arr) => (
@@ -792,7 +792,7 @@ function DayPanel({
               { id: "block", label: "Block time", icon: Ban },
               { id: "extra", label: "Open extra", icon: Clock },
               { id: "copy", label: "Copy schedule", icon: Copy },
-              { id: "capacity", label: "Edit capacity", icon: Users },
+              { id: "capacity", label: "Set times", icon: Users },
             ].map((a) => (
               <button
                 key={a.id}
@@ -928,7 +928,7 @@ export default function Slots() {
 
   function handleQuickAction(id) {
     if ((id === "block" || id === "extra" || id === "copy" || id === "capacity") && !selectedKey) {
-      showToast("Select a day on the calendar first", "error");
+      showToast("First tap a day on the calendar", "error");
       return;
     }
     setActionModal(id);
@@ -991,7 +991,7 @@ export default function Slots() {
   return (
     <PageShell
       title="Slots"
-      subtitle="Manage pitch availability and booking capacity."
+      subtitle="Set open times for bookings."
       wide
       actions={
         <div className="slots-header-btns" style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
@@ -1060,9 +1060,9 @@ export default function Slots() {
           <MiniSparkline data={metrics.spark} color="#059669" />
         </WalletCard>
         <WalletCard label="Booked slots" value={metrics.booked.toLocaleString()} trend="Already taken" t={t} />
-        <WalletCard label="Utilisation" value={`${metrics.utilisation}%`} trend="Booked ÷ total" t={t} />
+        <WalletCard label="% Booked" value={`${metrics.utilisation}%`} trend="How full your schedule is" t={t} />
         <WalletCard label="Peak day" value={metrics.peakDay} trend="Most bookings" t={t} />
-        <WalletCard label="Avg daily capacity" value={metrics.avgDaily.toLocaleString()} trend="Slots per active day" t={t} />
+        <WalletCard label="Avg slots / day" value={metrics.avgDaily.toLocaleString()} trend="Average open times each day" t={t} />
       </div>
 
       <div
@@ -1094,7 +1094,7 @@ export default function Slots() {
             }}
           />
           <div style={{ fontSize: 11, fontWeight: 500, color: t.textMuted, letterSpacing: "0.04em", textTransform: "uppercase" }}>
-            AI capacity insights
+            Helpful tips
           </div>
         </div>
         <ul style={{ margin: 0, padding: 0, listStyle: "none" }}>
@@ -1162,9 +1162,9 @@ export default function Slots() {
               fontFamily: "inherit",
             }}
           >
-            <option value="All">All technicians</option>
+            <option value="All">Everyone</option>
             <option value="Shop" disabled>
-              Per technician (soon)
+              Coming soon
             </option>
           </select>
           <select
