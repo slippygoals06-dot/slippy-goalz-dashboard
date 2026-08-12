@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Slippy Goalz — Book a Repair</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #000000;
+      --surface: #0A0A0A;
+      --surface2: #121212;
+      --surface3: #181818;
+      --border: rgba(255,255,255,0.09);
+      --border2: rgba(255,255,255,0.14);
+      --border-top: rgba(255,255,255,0.16);
+      --text: #FFFFFF;
+      --muted: #888888;
+      --accent: #F43F5E;
+      --accent-solid: #F43F5E;
+      --accent-bright: #FB7185;
+      --accent-hover: #E11D48;
+      --accent-glow: rgba(244,63,94,0.16);
+      --grad: linear-gradient(180deg, #F43F5E 0%, #E11D48 100%);
+      --grad-soft: linear-gradient(180deg, rgba(244,63,94,0.12) 0%, transparent 100%);
+      --card-bg: radial-gradient(circle at 20% 0%, rgba(244,63,94,0.06), transparent 50%), linear-gradient(180deg, #121212 0%, #0A0A0A 100%);
+      --green: #22C55E;
+      --red: #EF4444;
+      --shadow: 0 1px 0 rgba(255,255,255,0.05) inset, 0 4px 12px rgba(0,0,0,0.45), 0 16px 40px rgba(0,0,0,0.35);
+      --glow: 0 0 40px rgba(244,63,94,0.12);
+    }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background:
+        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(244,63,94,0.10), transparent),
+        var(--bg);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .ambient {
+      position: fixed; inset: 0; pointer-events: none; z-index: 0;
+      background:
+        radial-gradient(ellipse 55% 45% at 50% 40%, rgba(244,63,94,0.08), transparent 62%),
+        radial-gradient(ellipse 40% 35% at 80% 80%, rgba(244,63,94,0.05), transparent 55%);
+    }
+    .ambient::before {
+      content: '';
+      position: absolute;
+      top: -15%; left: -8%;
+      width: 55vw; height: 55vw;
+      background: radial-gradient(circle, rgba(244,63,94,0.07) 0%, transparent 70%);
+      border-radius: 50%;
+      animation: drift 9s ease-in-out infinite alternate;
+    }
+    .ambient::after {
+      content: '';
+      position: absolute;
+      bottom: -20%; right: -10%;
+      width: 45vw; height: 45vw;
+      background: radial-gradient(circle, rgba(251,113,133,0.05) 0%, transparent 70%);
+      border-radius: 50%;
+      animation: drift 11s ease-in-out infinite alternate-reverse;
+    }
+    @keyframes drift { from { transform: translate(0,0); } to { transform: translate(24px, 16px); } }
+
+    /* ── Launcher ── */
+    #launcher {
+      position: fixed;
+      bottom: 28px; right: 28px;
+      width: 60px; height: 60px;
+      border-radius: 50%;
+      background: var(--grad);
+      border: 1px solid rgba(255,255,255,0.08);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.06),
+        0 0 20px rgba(244,63,94,0.25),
+        0 8px 24px rgba(0,0,0,0.45),
+        0 0 0 0 rgba(244,63,94,0.2);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      z-index: 9999;
+      animation: pulse-ring 3s ease-in-out infinite;
+      overflow: hidden;
+    }
+    #launcher:hover {
+      transform: scale(1.08);
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.08),
+        0 0 28px rgba(244,63,94,0.4),
+        0 12px 32px rgba(0,0,0,0.5);
+    }
+    #launcher svg { transition: transform 0.3s ease; }
+    #launcher.open svg { transform: rotate(45deg); }
+    @keyframes pulse-ring {
+      0%, 100% {
+        box-shadow:
+          inset 0 1px 0 rgba(255,255,255,0.06),
+          0 0 20px rgba(244,63,94,0.25),
+          0 8px 24px rgba(0,0,0,0.45),
+          0 0 0 0 rgba(244,63,94,0.2);
+      }
+      50% {
+        box-shadow:
+          inset 0 1px 0 rgba(255,255,255,0.06),
+          0 0 20px rgba(244,63,94,0.25),
+          0 8px 24px rgba(0,0,0,0.45),
+          0 0 0 12px rgba(244,63,94,0);
+      }
+    }
+
+    /* ── Widget ── */
+    #widget {
+      position: fixed;
+      bottom: 100px; right: 28px;
+      width: 380px;
+      height: 580px;
+      background: var(--card-bg);
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      border-top: 1px solid var(--border-top);
+      box-shadow: var(--shadow), var(--glow);
+      display: flex; flex-direction: column;
+      overflow: hidden;
+      z-index: 9998;
+      transform: scale(0.85) translateY(20px);
+      opacity: 0;
+      pointer-events: none;
+      transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1), opacity 0.25s ease;
+      transform-origin: bottom right;
+    }
+    #widget.open {
+      transform: scale(1) translateY(0);
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .w-header {
+      padding: 16px 18px 14px;
+      background: var(--grad-soft);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 12px;
+      flex-shrink: 0;
+      position: relative;
+    }
+    .w-header::after {
+      content: '';
+      position: absolute;
+      left: 0; right: 0; bottom: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(244,63,94,0.35), transparent);
+    }
+    .w-avatar {
+      width: 42px; height: 42px;
+      border-radius: 12px;
+      background: linear-gradient(145deg, #1a1a1f 0%, #0d0d10 100%);
+      border: 1px solid rgba(244,63,94,0.35);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      box-shadow: 0 0 20px rgba(244,63,94,0.18);
+      overflow: hidden;
+      color: var(--accent);
+    }
+    .w-avatar svg { width: 20px; height: 20px; }
+    .w-info { flex: 1; min-width: 0; }
+    .w-name { font-size: 15px; font-weight: 700; color: var(--text); letter-spacing: -0.2px; }
+    .w-name .f { color: var(--accent); }
+    .w-status {
+      font-size: 11px; color: var(--accent); font-weight: 600;
+      display: flex; align-items: center; gap: 5px; margin-top: 2px;
+      opacity: 0.9;
+    }
+    .w-status::before {
+      content: '';
+      width: 6px; height: 6px;
+      background: var(--accent-solid);
+      border-radius: 50%;
+      display: inline-block;
+      box-shadow: 0 0 8px var(--accent-solid);
+      animation: blink 2s ease-in-out infinite;
+    }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.35} }
+    .w-powered {
+      font-size: 10px; color: var(--muted); font-weight: 500;
+      text-align: right; line-height: 1.3;
+    }
+    .w-powered span { color: var(--accent); font-weight: 650; }
+
+    #messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 14px;
+      display: flex; flex-direction: column; gap: 10px;
+      scroll-behavior: smooth;
+      background:
+        radial-gradient(ellipse 80% 40% at 50% 0%, rgba(244,63,94,0.04), transparent 60%);
+    }
+    #messages::-webkit-scrollbar { width: 4px; }
+    #messages::-webkit-scrollbar-track { background: transparent; }
+    #messages::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+
+    .msg {
+      display: flex; gap: 8px; align-items: flex-end;
+      animation: msgIn 0.3s cubic-bezier(0.34,1.4,0.64,1);
+    }
+    @keyframes msgIn {
+      from { opacity: 0; transform: translateY(10px) scale(0.95); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    .msg.user { flex-direction: row-reverse; }
+
+    .msg-avatar {
+      width: 28px; height: 28px;
+      border-radius: 10px;
+      background: linear-gradient(145deg, #1a1a1f 0%, #0d0d10 100%);
+      border: 1px solid rgba(244,63,94,0.28);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      overflow: hidden;
+      color: var(--accent);
+    }
+    .msg-avatar svg { width: 14px; height: 14px; }
+    .msg.user .msg-avatar {
+      background: rgba(255,255,255,0.04);
+      border-color: rgba(255,255,255,0.12);
+      font-size: 12px;
+      color: var(--text);
+    }
+
+    .msg-bubble {
+      max-width: 78%;
+      padding: 10px 14px;
+      border-radius: 14px;
+      font-size: 13.5px; line-height: 1.55;
+      font-weight: 400;
+    }
+    .msg.bot .msg-bubble {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-bottom-left-radius: 4px;
+    }
+    .msg.user .msg-bubble {
+      background: var(--grad);
+      color: #FFFFFF;
+      font-weight: 550;
+      border: 1px solid transparent;
+      border-bottom-right-radius: 4px;
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.12),
+        0 0 16px rgba(244,63,94,0.22);
+    }
+
+    .msg-link {
+      color: var(--accent-bright);
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      font-weight: 600;
+      word-break: break-all;
+    }
+    .msg-link:hover { color: #fff; }
+
+    .book-cta {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      margin-top: 10px;
+      padding: 10px 14px;
+      border-radius: 10px;
+      background: var(--grad);
+      color: #fff !important;
+      text-decoration: none !important;
+      font-size: 13px;
+      font-weight: 650;
+      letter-spacing: -0.1px;
+      box-shadow: 0 6px 18px rgba(244,63,94,0.28);
+      transition: transform 0.15s ease, filter 0.15s ease;
+    }
+    .book-cta:hover { transform: translateY(-1px); filter: brightness(1.05); }
+    .book-cta-wrap { display: block; margin-top: 4px; }
+
+    .booking-card {
+      margin: 6px 0;
+      background: var(--card-bg);
+      border: 1px solid rgba(244,63,94,0.28);
+      border-top: 1px solid var(--border-top);
+      border-radius: 16px;
+      padding: 14px 16px;
+      box-shadow: var(--shadow);
+      animation: msgIn 0.3s ease;
+    }
+    .booking-card-title {
+      font-size: 12px; font-weight: 700;
+      color: var(--accent); text-transform: uppercase; letter-spacing: 0.8px;
+      margin-bottom: 10px; display: flex; align-items: center; gap: 6px;
+    }
+    .booking-card-row {
+      display: flex; justify-content: space-between;
+      font-size: 12.5px; color: var(--text);
+      padding: 3px 0; border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    .booking-card-row:last-child { border-bottom: none; }
+    .booking-card-row span:first-child { color: var(--muted); }
+
+    .typing {
+      display: flex; align-items: center; gap: 8px;
+      animation: msgIn 0.3s ease;
+    }
+    .typing-dots {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border);
+      border-radius: 14px; border-bottom-left-radius: 4px;
+      padding: 12px 16px;
+      display: flex; gap: 4px; align-items: center;
+    }
+    .typing-dots span {
+      width: 6px; height: 6px;
+      background: var(--muted);
+      border-radius: 50%;
+      animation: bounce 1.2s ease-in-out infinite;
+    }
+    .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes bounce {
+      0%,60%,100% { transform: translateY(0); }
+      30% { transform: translateY(-6px); background: var(--accent); }
+    }
+
+    .w-input {
+      padding: 12px 14px 16px;
+      border-top: 1px solid var(--border);
+      display: flex; gap: 8px; align-items: flex-end;
+      flex-shrink: 0;
+      background: linear-gradient(0deg, rgba(0,0,0,0.35), transparent);
+    }
+    #chatInput {
+      flex: 1;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px 14px;
+      color: var(--text);
+      font-size: 13.5px;
+      font-family: inherit;
+      resize: none;
+      outline: none;
+      max-height: 100px;
+      transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+      line-height: 1.4;
+    }
+    #chatInput::placeholder { color: rgba(255,255,255,0.28); }
+    #chatInput:focus {
+      border-color: rgba(244,63,94,0.55);
+      box-shadow: 0 0 0 3px rgba(244,63,94,0.18), 0 0 20px rgba(244,63,94,0.12);
+      background: rgba(255,255,255,0.05);
+    }
+
+    #sendBtn {
+      width: 40px; height: 40px;
+      border-radius: 12px;
+      background: var(--grad);
+      border: 1px solid rgba(255,255,255,0.08);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      transition: transform 0.15s ease, opacity 0.15s, box-shadow 0.15s;
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.06),
+        0 0 16px rgba(244,63,94,0.2);
+    }
+    #sendBtn:hover {
+      transform: scale(1.06);
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.08),
+        0 0 22px rgba(244,63,94,0.35);
+    }
+    #sendBtn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+    #sendBtn svg path { stroke: #f5f5f5; }
+
+    .demo-page {
+      text-align: center; color: var(--muted);
+      font-size: 13px; z-index: 1;
+      position: relative;
+    }
+    .demo-page h1 {
+      font-size: 34px; font-weight: 800;
+      color: var(--text);
+      margin-bottom: 6px;
+      letter-spacing: -0.6px;
+    }
+    .demo-page h1 .f { color: var(--accent); text-shadow: 0 0 24px rgba(244,63,94,0.45); }
+    .demo-page .sub {
+      font-size: 11px;
+      font-weight: 650;
+      letter-spacing: 0.28em;
+      color: var(--accent);
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+    .demo-page p { font-size: 14px; color: rgba(255,255,255,0.32); }
+
+    @media (max-width: 420px) {
+      #widget { width: calc(100vw - 20px); right: 10px; bottom: 90px; height: 500px; }
+      #launcher { right: 16px; bottom: 16px; }
+    }
+
+    .quick-replies {
+      display: flex; flex-wrap: wrap; gap: 6px;
+      padding: 4px 0 8px 36px;
+      animation: msgIn 0.3s ease;
+    }
+    .qr-btn, .slot-btn, .time-btn {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border2);
+      border-radius: 20px;
+      padding: 6px 12px;
+      font-size: 12px; font-family: inherit;
+      color: var(--accent-bright);
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, transform 0.1s;
+      white-space: nowrap;
+    }
+    .qr-btn:hover, .slot-btn:hover, .time-btn:hover {
+      background: rgba(244,63,94,0.12);
+      border-color: rgba(244,63,94,0.45);
+      transform: translateY(-1px);
+    }
+    .slot-btn { color: var(--green); border-color: rgba(52,211,153,0.3); }
+    .slot-btn:hover { background: rgba(52,211,153,0.1); border-color: var(--green); }
+    .time-btn { color: var(--accent); border-color: rgba(244,63,94,0.3); }
+    .time-btn:hover { background: rgba(244,63,94,0.1); border-color: var(--accent); }
+
+    .rating-prompt {
+      margin: 4px 0 8px 36px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border);
+      border-radius: 14px; padding: 10px 14px;
+      animation: msgIn 0.3s ease;
+    }
+    .rating-label { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+    .rating-stars { display: flex; gap: 6px; }
+    .star { font-size: 22px; cursor: pointer; transition: transform 0.15s; opacity: 0.5; }
+    .star:hover, .star:hover ~ .star { opacity: 1; transform: scale(1.2); }
+    .rating-stars:hover .star { opacity: 1; }
+  </style>
+</head>
+<body>
+
+<div class="ambient"></div>
+
+<div class="demo-page">
+  <h1>We <span class="f">F</span>ix</h1>
+  <div class="sub">Mobile Service</div>
+  <p>Premium phone repair · Chat to book</p>
+  <p style="margin-top:40px; font-size:12px; opacity:0.4">👇 Chat widget — click the button</p>
+</div>
+
+<!-- Launcher -->
+<button id="launcher" onclick="toggleWidget()" aria-label="Open chat">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.832-1.438A9.96 9.96 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2z" fill="#f5f5f5"/>
+  </svg>
+</button>
+
+<!-- Widget Window -->
+<div id="widget">
+  <div class="w-header">
+    <div class="w-avatar" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 3l1.8 4.8L19 9.5l-4 3.2L16.2 18 12 15.2 7.8 18l1.2-5.3-4-3.2 5.2-1.7L12 3z"/>
+      </svg>
+    </div>
+    <div class="w-info">
+      <div class="w-name">We <span class="f">Fix</span> Assistant</div>
+      <div class="w-status">Online — happy to help</div>
+    </div>
+    <div class="w-powered">Powered by<br><span>Slippy Goalz AI</span></div>
+  </div>
+
+  <div id="messages"></div>
+
+  <div class="w-input">
+    <textarea id="chatInput" rows="1" placeholder="Type your message..." oninput="autoResize(this)" onkeydown="handleKey(event)"></textarea>
+    <button id="sendBtn" onclick="sendMessage()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+        <path d="M22 2L11 13M22 2L15 22L11 13M22 2L2 9L11 13" stroke="#f5f5f5" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+  </div>
+</div>
+
+<script>
+  const API = "https://irepair-backend-production-2418.up.railway.app";
+  const BOOK_URL = "https://irepair-dashboard.vercel.app/book";
+  const BOT_AVATAR = `<div class="msg-avatar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 4.8L19 9.5l-4 3.2L16.2 18 12 15.2 7.8 18l1.2-5.3-4-3.2 5.2-1.7L12 3z"/></svg></div>`;
+
+  let history = [];
+  let isOpen = false;
+  let isLoading = false;
+  let greeted = false;
+
+  const SESSION_ID = (() => {
+    let sid = sessionStorage.getItem('slippy_session_id');
+    if (!sid) { sid = 'sess_' + Math.random().toString(36).slice(2) + Date.now().toString(36); sessionStorage.setItem('slippy_session_id', sid); }
+    return sid;
+  })();
+
+  function escapeHtml(s) {
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function formatBotHtml(text) {
+    let html = escapeHtml(text);
+    html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    html = html.replace(/\n/g, '<br>');
+    // Turn URLs into clickable links; booking URLs become a CTA button
+    html = html.replace(/(https?:\/\/[^\s<]+)/g, (url) => {
+      const clean = url.replace(/&amp;/g, '&').replace(/[),.;]+$/g, '');
+      const trailing = url.slice(clean.length);
+      if (clean.includes('/book')) {
+        return `<span class="book-cta-wrap"><a class="book-cta" href="${clean}" target="_blank" rel="noopener noreferrer">Open booking page -></a></span>${trailing}`;
+      }
+      return `<a class="msg-link" href="${clean}" target="_blank" rel="noopener noreferrer">${escapeHtml(clean)}</a>${trailing}`;
+    });
+    // Remove leftover 🔗 before CTA for cleaner look
+    html = html.replace(/🔗\s*(<span class="book-cta-wrap">)/g, '$1');
+    html = html.replace(/🔗\s*(<a class="msg-link")/g, '$1');
+    return html;
+  }
+
+  function toggleWidget() {
+    isOpen = !isOpen;
+    document.getElementById('widget').classList.toggle('open', isOpen);
+    document.getElementById('launcher').classList.toggle('open', isOpen);
+    if (isOpen && !greeted) {
+      greeted = true;
+      setTimeout(() => {
+        addBotMessage(
+          "Hey! 👋 Good to see you — I'm the Slippy Goalz assistant.\n\n" +
+          "I can help with prices, shop hours, or getting a repair lined up. " +
+          "If you want to book now, I can take you straight to the booking page."
+        );
+        setTimeout(() => addQuickReplies(["📅 Book a Repair", "💰 Check Prices", "🕐 Shop Hours", "📍 Location"]), 500);
+      }, 350);
+    }
+    if (isOpen) setTimeout(() => document.getElementById('chatInput').focus(), 350);
+  }
+
+  function autoResize(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 100) + 'px';
+  }
+
+  function handleKey(e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  }
+
+  function addBotMessage(text) {
+    const msgs = document.getElementById('messages');
+    const div = document.createElement('div');
+    div.className = 'msg bot';
+    div.innerHTML = `${BOT_AVATAR}<div class="msg-bubble">${formatBotHtml(text)}</div>`;
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  function addUserMessage(text) {
+    const msgs = document.getElementById('messages');
+    const div = document.createElement('div');
+    div.className = 'msg user';
+    div.innerHTML = `<div class="msg-avatar">👤</div><div class="msg-bubble">${escapeHtml(text).replace(/\n/g, '<br>')}</div>`;
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  function showTyping() {
+    const msgs = document.getElementById('messages');
+    const div = document.createElement('div');
+    div.className = 'typing'; div.id = 'typing';
+    div.innerHTML = `${BOT_AVATAR}<div class="typing-dots"><span></span><span></span><span></span></div>`;
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  function hideTyping() {
+    const t = document.getElementById('typing');
+    if (t) t.remove();
+  }
+
+  function addBookingCard(info) {
+    const msgs = document.getElementById('messages');
+    const div = document.createElement('div');
+    div.className = 'booking-card';
+    div.innerHTML = `
+      <div class="booking-card-title">✅ Booking Confirmed</div>
+      ${info.booking_id ? `<div class="booking-card-row"><span>Booking ID</span><span>${escapeHtml(info.booking_id)}</span></div>` : ''}
+      ${info.name     ? `<div class="booking-card-row"><span>Name</span><span>${escapeHtml(info.name)}</span></div>` : ''}
+      ${info.phone    ? `<div class="booking-card-row"><span>Phone</span><span>${escapeHtml(info.phone)}</span></div>` : ''}
+      ${info.email    ? `<div class="booking-card-row"><span>Email</span><span>${escapeHtml(info.email)}</span></div>` : ''}
+      ${info.device   ? `<div class="booking-card-row"><span>Device</span><span>${escapeHtml(info.device)}</span></div>` : ''}
+      ${info.issue    ? `<div class="booking-card-row"><span>Issue</span><span>${escapeHtml(info.issue)}</span></div>` : ''}
+      ${info.date     ? `<div class="booking-card-row"><span>Date</span><span>${escapeHtml(info.date)}</span></div>` : ''}
+      ${info.time     ? `<div class="booking-card-row"><span>Time</span><span>${escapeHtml(info.time)}</span></div>` : ''}
+    `;
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  function addQuickReplies(options) {
+    clearButtons();
+    const msgs = document.getElementById('messages');
+    const div = document.createElement('div');
+    div.className = 'quick-replies'; div.id = 'btn-area';
+    div.innerHTML = options.map(o => {
+      const safe = String(o).replace(/'/g, "\\'");
+      return `<button class="qr-btn" onclick="quickReply('${safe}')">${escapeHtml(o)}</button>`;
+    }).join('');
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  function addSlotButtons(slots) {
+    if (!slots || !slots.length) return;
+    clearButtons();
+    const msgs = document.getElementById('messages');
+    const div = document.createElement('div');
+    div.className = 'quick-replies'; div.id = 'btn-area';
+    div.innerHTML = slots.map(s => {
+      const safe = String(s).replace(/'/g, "\\'");
+      return `<button class="slot-btn" onclick="quickReply('${safe}')">${escapeHtml(s)}</button>`;
+    }).join('');
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  function addTimeButtons(times) {
+    if (!times || !times.length) return;
+    clearButtons();
+    const msgs = document.getElementById('messages');
+    const div = document.createElement('div');
+    div.className = 'quick-replies'; div.id = 'btn-area';
+    div.innerHTML = times.map(t => {
+      const label = typeof t === 'object' ? t.label : t;
+      const value = typeof t === 'object' ? t.value : t;
+      const safeV = String(value).replace(/'/g, "\\'");
+      const safeL = String(label).replace(/'/g, "\\'");
+      return `<button class="time-btn" onclick="quickReply('${safeV}', '${safeL}')">${escapeHtml(label)}</button>`;
+    }).join('');
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  function addRatingPrompt() {
+    const msgs = document.getElementById('messages');
+    const div = document.createElement('div');
+    div.className = 'rating-prompt';
+    div.innerHTML = `
+      <div class="rating-label">How was your experience?</div>
+      <div class="rating-stars">
+        ${[1,2,3,4,5].map(n => `<span class="star" onclick="rateExperience(${n})">⭐</span>`).join('')}
+      </div>
+    `;
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  function rateExperience(n) {
+    document.querySelector('.rating-prompt').innerHTML = `<div class="rating-label">Thanks for the ${n}⭐ rating! See you soon! 🙏</div>`;
+  }
+
+  function clearButtons() {
+    const old = document.getElementById('btn-area');
+    if (old) old.remove();
+  }
+
+  function quickReply(value, displayLabel) {
+    clearButtons();
+    const label = displayLabel || value;
+    document.getElementById('chatInput').value = value;
+    sendMessage(label);
+  }
+
+  function offlineLocalReply(text) {
+    const t = String(text || "").trim().toLowerCase();
+
+    if (!t) return null;
+
+    const greetings = ["hi", "hey", "hello", "yo", "salam", "assalam", "asalam"];
+    if (greetings.includes(t) || greetings.some((g) => t.startsWith(g + " ") || t.startsWith(g + "!"))) {
+      return (
+        "Hey! 👋 Nice to hear from you.\n\n" +
+        "I can help with prices, hours, or getting a repair booked. What do you need?"
+      );
+    }
+
+    if (
+      t.includes("price") || t.includes("cost") || t.includes("kitna") ||
+      t.includes("charges") || t.includes("check prices") || t.includes("💰")
+    ) {
+      return (
+        "Sure — rough prices for Lahore:\n\n" +
+        "• Screen — Rs 4,000 to 14,000\n" +
+        "• Battery — Rs 3,500 to 5,500\n" +
+        "• Charging port — Rs 2,500 to 4,000\n" +
+        "• Software — Rs 1,500 to 3,000\n\n" +
+        "Final quote depends on the exact model. Want me to open booking so you can lock a time?\n\n" +
+        BOOK_URL
+      );
+    }
+
+    if (
+      t.includes("hour") || t.includes("open") || t.includes("timing") ||
+      t.includes("shop hours") || t.includes("🕐")
+    ) {
+      return "We're open Mon–Sat, 10 AM to 8 PM. Sundays we're closed.\n\nShop 14, Al-Hamra Arcade, Gulberg III, Lahore — come anytime during those hours.";
+    }
+
+    if (t.includes("book") || t.includes("📅") || t.includes("repair") || t.includes("appointment")) {
+      return (
+        "Sure — when you're ready, tap the button below to open the booking page and pick your device, issue, date and time.\n\n" +
+        BOOK_URL
+      );
+    }
+
+    if (t.includes("where") || t.includes("location") || t.includes("address") || t.includes("kahan") || t.includes("📍")) {
+      return "We're at Shop 14, Al-Hamra Arcade, Main Boulevard Gulberg III, Lahore.\n\nMaps: https://maps.google.com/?q=FixPro+Gulberg+Lahore\nOr call +92 300 1234567 if you need directions.";
+    }
+
+    if (t.includes("reschedule") || t.includes("cancel")) {
+      return "For reschedule or cancel, the fastest way is WhatsApp/call on +92 300 1234567 with your booking phone number — the team can sort it in a minute.";
+    }
+
+    return (
+      "I'm a bit limited right now, but I can still help with prices, hours, location, or booking.\n\n" +
+      "Or jump straight into booking here:\n" + BOOK_URL
+    );
+  }
+
+  function isAiOutageReply(reply) {
+    const r = String(reply || "").toLowerCase();
+    return r.includes("having a little trouble") || r.includes("trouble responding");
+  }
+
+  async function sendMessage(displayOverride) {
+    const input = document.getElementById('chatInput');
+    const text = input.value.trim();
+    if (!text || isLoading) return;
+
+    input.value = ''; input.style.height = 'auto';
+    document.getElementById('sendBtn').disabled = true;
+    isLoading = true;
+    clearButtons();
+
+    addUserMessage(displayOverride || text);
+    history.push({ role: 'user', content: text });
+
+    // Booking intent: show a clickable CTA only — never auto-open the page
+    if (/book|appointment|schedule/i.test(text) || text.includes('📅')) {
+      showTyping();
+      setTimeout(() => {
+        hideTyping();
+        const reply =
+          "Sure — tap the button below when you want to book. " +
+          "It'll take you to the booking page so you can pick device, issue, date and time.\n\n" +
+          BOOK_URL;
+        addBotMessage(reply);
+        history.push({ role: 'assistant', content: reply });
+        setTimeout(() => addQuickReplies(["💰 Check Prices", "🕐 Shop Hours", "📍 Location"]), 400);
+        isLoading = false;
+        document.getElementById('sendBtn').disabled = false;
+        document.getElementById('chatInput').focus();
+      }, 450);
+      return;
+    }
+
+    showTyping();
+
+    try {
+      const res = await fetch(`${API}/chat/customer`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text, history: history.slice(-12), session_id: SESSION_ID }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+
+      const delay = data.typing_delay_ms || 400;
+      setTimeout(() => {
+        hideTyping();
+        let reply = data.reply || "Sorry, something went wrong.";
+        if (isAiOutageReply(reply)) {
+          reply = offlineLocalReply(text) || reply;
+        }
+        // Ensure booking URLs from API become CTAs via formatBotHtml
+        addBotMessage(reply);
+        history.push({ role: 'assistant', content: reply });
+
+        if (data.booking_created && data.booking_info) addBookingCard(data.booking_info);
+        if (data.rating_prompt) setTimeout(addRatingPrompt, 600);
+        if (data.slot_buttons?.length)  setTimeout(() => addSlotButtons(data.slot_buttons), 300);
+        else if (data.time_buttons?.length) setTimeout(() => addTimeButtons(data.time_buttons), 300);
+        else if (data.quick_replies?.length) setTimeout(() => addQuickReplies(data.quick_replies), 300);
+        else setTimeout(() => addQuickReplies(["📅 Book a Repair", "💰 Check Prices", "🕐 Shop Hours"]), 300);
+        if (data.session_reset) history = [];
+      }, delay);
+
+    } catch (err) {
+      hideTyping();
+      const reply = offlineLocalReply(text) || (
+        "Couldn't reach the server just now — but you can still book here:\n" + BOOK_URL
+      );
+      addBotMessage(reply);
+      history.push({ role: 'assistant', content: reply });
+      setTimeout(() => addQuickReplies(["📅 Book a Repair", "💰 Check Prices", "🕐 Shop Hours"]), 300);
+      console.error(err);
+    }
+
+    isLoading = false;
+    document.getElementById('sendBtn').disabled = false;
+    document.getElementById('chatInput').focus();
+  }
+</script>
+</body>
+</html>
+
