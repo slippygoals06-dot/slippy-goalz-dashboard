@@ -3,12 +3,19 @@
 export const PAYMENT_STATUSES = ["Unpaid", "Half Payment", "Full Payment"];
 export const PAYMENT_MODES = ["Cash", "Online"];
 export const SERVICE_LABEL = "Pitch booking";
+export const MIN_PLAYERS = 1;
+export const MAX_PLAYERS = 10;
 
 const PLAYERS_RE = /^(\d+)\s*players?$/i;
 
+export function clampPlayers(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return MIN_PLAYERS;
+  return Math.min(MAX_PLAYERS, Math.max(MIN_PLAYERS, Math.round(n)));
+}
+
 export function playersToDevice(players) {
-  const n = Math.max(1, Number(players) || 1);
-  return `${n} players`;
+  return `${clampPlayers(players)} players`;
 }
 
 export function parsePlayers(device) {

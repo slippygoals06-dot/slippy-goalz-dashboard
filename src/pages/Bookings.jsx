@@ -302,12 +302,13 @@ function AddBookingModal({ open, onClose, onSaved }) {
                 style={{ ...inputStyle, textAlign: "center" }}
                 type="number"
                 min={1}
+                max={10}
                 value={form.players}
-                onChange={(e) => handleChange("players", Math.max(1, Number(e.target.value) || 1))}
+                onChange={(e) => handleChange("players", Math.min(10, Math.max(1, Number(e.target.value) || 1)))}
               />
               <button
                 type="button"
-                onClick={() => handleChange("players", Number(form.players || 1) + 1)}
+                onClick={() => handleChange("players", Math.min(10, Number(form.players || 1) + 1))}
                 style={{ ...inputStyle, width: 42, padding: 0, cursor: "pointer", fontSize: 18, flexShrink: 0 }}
               >+</button>
             </div>

@@ -1,7 +1,14 @@
 import { useState, useEffect } from "react";
 import { useTheme } from "../context/ThemeContext";
 import { BUSINESS_NAME } from "../constants/brand";
-import { toApiPayload, PAYMENT_MODES, joinName } from "../utils/bookingFields";
+import {
+  toApiPayload,
+  PAYMENT_MODES,
+  joinName,
+  clampPlayers,
+  MIN_PLAYERS,
+  MAX_PLAYERS,
+} from "../utils/bookingFields";
 import { API_URL as API } from "../config";
 
 function formatDateLabel(iso) {
@@ -9,6 +16,38 @@ function formatDateLabel(iso) {
   const [y, m, d] = String(iso).split("-");
   if (!y || !m || !d) return iso;
   return `${d}/${m}/${y}`;
+}
+
+function formatDateChip(iso) {
+  if (!iso) return "";
+  const d = new Date(`${iso}T12:00:00`);
+  if (Number.isNaN(d.getTime())) return formatDateLabel(iso);
+  return d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+}
+
+function networkErrorMessage(err) {
+  const msg = String(err?.message || "");
+  if (/failed to fetch|networkerror|load failed|network request failed/i.test(msg)) {
+    return "Couldn't reach the server. Please check your connection and try again.";
+  }
+  return msg || "Something went wrong. Please try again.";
+}
+
+function Section({ title, hint, children }) {
+  const { theme: t } = useTheme();
+  return (
+    <section style={{ display: "grid", gap: 12 }}>
+      <div>
+        <div style={{ fontSize: 13, fontWeight: 600, color: t.textPrimary, letterSpacing: -0.2 }}>
+          {title}
+        </div>
+        {hint && (
+          <div style={{ marginTop: 4, fontSize: 12, color: t.textMuted, lineHeight: 1.4 }}>{hint}</div>
+        )}
+      </div>
+      {children}
+    </section>
+  );
 }
 
 export default function PublicBooking() {
@@ -22,11 +61,12 @@ export default function PublicBooking() {
     firstName: "",
     lastName: "",
     phone: "",
-    players: 10,
+    players: MAX_PLAYERS,
     paymentMode: "Cash",
     date: "",
     time: "",
   });
+  const [playersDraft, setPlayersDraft] = useState(String(MAX_PLAYERS));
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [done, setDone] = useState(false);
@@ -34,7 +74,7 @@ export default function PublicBooking() {
   useEffect(() => {
     async function loadSlots() {
       try {
-        const res = await fetch(`${API}/slots`);
+        const res = await fetch(`${API}/slots/`);
         if (!res.ok) throw new Error("fail");
         const data = await res.json();
         const today = new Date();
@@ -62,7 +102,7 @@ export default function PublicBooking() {
         });
         setSlots([...map.values()]);
       } catch {
-        setSlotsError("Couldn't load live availability — pick a date and time and we'll confirm.");
+        setSlotsError("Couldn't load live times — pick a date and time and we'll confirm.");
       } finally {
         setLoadingSlots(false);
       }
@@ -72,6 +112,13 @@ export default function PublicBooking() {
 
   function handleChange(field, value) {
     setForm((f) => ({ ...f, [field]: value }));
+  }
+
+  function applyPlayers(raw) {
+    const next = clampPlayers(raw);
+    handleChange("players", next);
+    setPlayersDraft(String(next));
+    return next;
   }
 
   const slotsByDate = {};
@@ -91,8 +138,9 @@ export default function PublicBooking() {
       setError("Please enter your phone number.");
       return false;
     }
-    if (!form.players || Number(form.players) < 1) {
-      setError("Please set the number of players.");
+    const players = clampPlayers(form.players);
+    if (!players) {
+      setError(`Please choose between ${MIN_PLAYERS} and ${MAX_PLAYERS} players.`);
       return false;
     }
     if (!form.date || !form.time) {
@@ -117,7 +165,7 @@ export default function PublicBooking() {
       firstName: form.firstName,
       lastName: form.lastName,
       phone: form.phone,
-      players: form.players,
+      players: clampPlayers(form.players),
       paymentMode: form.paymentMode,
       paymentStatus: "Unpaid",
       date: form.date,
@@ -128,7 +176,7 @@ export default function PublicBooking() {
     });
 
     try {
-      const res = await fetch(`${API}/bookings`, {
+      const res = await fetch(`${API}/bookings/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(booking),
@@ -146,7 +194,7 @@ export default function PublicBooking() {
       }
       setDone(true);
     } catch (err) {
-      setError(err.message || "Something went wrong. Please try again.");
+      setError(networkErrorMessage(err));
     } finally {
       setSubmitting(false);
     }
@@ -155,11 +203,11 @@ export default function PublicBooking() {
   const inputStyle = {
     width: "100%",
     padding: "13px 15px",
-    borderRadius: 10,
+    borderRadius: 12,
     background: dark ? "rgba(255,255,255,0.04)" : "#f8f9fe",
     border: `1.5px solid ${t.border}`,
     color: t.textPrimary,
-    fontSize: 14.5,
+    fontSize: 15,
     outline: "none",
     fontFamily: "inherit",
     boxSizing: "border-box",
@@ -192,17 +240,38 @@ export default function PublicBooking() {
             width: "100%",
             background: t.cardBg,
             border: `1px solid ${t.border}`,
-            borderRadius: 18,
-            padding: 32,
+            borderRadius: 20,
+            padding: 36,
             textAlign: "center",
             boxShadow: t.cardShadow,
           }}
         >
-          <div style={{ fontSize: 28, fontWeight: 600, marginBottom: 10 }}>Booking sent</div>
-          <p style={{ margin: 0, color: t.textMuted, lineHeight: 1.5, fontSize: 14 }}>
+          <div
+            style={{
+              width: 56,
+              height: 56,
+              borderRadius: "50%",
+              margin: "0 auto 18px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              background: t.accentGlow,
+              color: t.accent,
+              fontSize: 24,
+              fontWeight: 600,
+            }}
+          >
+            ✓
+          </div>
+          <div style={{ fontSize: 26, fontWeight: 600, marginBottom: 10, letterSpacing: -0.5 }}>
+            Booking sent
+          </div>
+          <p style={{ margin: 0, color: t.textMuted, lineHeight: 1.55, fontSize: 14 }}>
             Thanks {joinName(form.firstName, form.lastName)}. Your booking for{" "}
-            <strong>{formatDateLabel(form.date)}</strong> at <strong>{form.time}</strong> is with the{" "}
-            {BUSINESS_NAME} team. We'll confirm shortly.
+            <strong style={{ color: t.textPrimary }}>{formatDateLabel(form.date)}</strong> at{" "}
+            <strong style={{ color: t.textPrimary }}>{form.time}</strong> for{" "}
+            <strong style={{ color: t.textPrimary }}>{clampPlayers(form.players)} players</strong> is
+            with the {BUSINESS_NAME} team. We'll confirm shortly.
           </p>
         </div>
       </div>
@@ -216,26 +285,77 @@ export default function PublicBooking() {
         background: t.bg,
         color: t.textPrimary,
         fontFamily: "inherit",
-        padding: "28px 16px 48px",
       }}
     >
-      <div style={{ maxWidth: 560, margin: "0 auto" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 28 }}>
+      <style>{`
+        .pb-range {
+          -webkit-appearance: none;
+          appearance: none;
+          width: 100%;
+          height: 6px;
+          border-radius: 999px;
+          background: linear-gradient(
+            to right,
+            ${t.accent} 0%,
+            ${t.accent} ${((clampPlayers(form.players) - 1) / (MAX_PLAYERS - 1)) * 100}%,
+            ${dark ? "rgba(255,255,255,0.12)" : "rgba(15,17,21,0.12)"} ${((clampPlayers(form.players) - 1) / (MAX_PLAYERS - 1)) * 100}%,
+            ${dark ? "rgba(255,255,255,0.12)" : "rgba(15,17,21,0.12)"} 100%
+          );
+          outline: none;
+        }
+        .pb-range::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          appearance: none;
+          width: 22px;
+          height: 22px;
+          border-radius: 50%;
+          background: ${t.accent};
+          border: 3px solid ${dark ? "#1a1d24" : "#fff"};
+          box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+          cursor: pointer;
+        }
+        .pb-range::-moz-range-thumb {
+          width: 22px;
+          height: 22px;
+          border-radius: 50%;
+          background: ${t.accent};
+          border: 3px solid ${dark ? "#1a1d24" : "#fff"};
+          box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+          cursor: pointer;
+        }
+        .pb-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 12px;
+        }
+        @media (max-width: 520px) {
+          .pb-grid { grid-template-columns: 1fr; }
+        }
+      `}</style>
+
+      <div
+        style={{
+          background: t.cardBg,
+          borderBottom: `1px solid ${t.border}`,
+          padding: "18px 16px",
+        }}
+      >
+        <div style={{ maxWidth: 560, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
           <div>
-            <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: 1.2, color: t.accent, textTransform: "uppercase" }}>
+            <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 1.4, color: t.accent, textTransform: "uppercase" }}>
               {BUSINESS_NAME}
             </div>
-            <h1 style={{ margin: "8px 0 0", fontSize: 28, fontWeight: 600, letterSpacing: -0.6 }}>Book a time</h1>
-            <p style={{ margin: "8px 0 0", color: t.textMuted, fontSize: 14 }}>
-              Fill in your details. We will confirm your booking soon.
-            </p>
+            <h1 style={{ margin: "4px 0 0", fontSize: 22, fontWeight: 600, letterSpacing: -0.5 }}>
+              Book a pitch
+            </h1>
           </div>
           <button
             type="button"
             onClick={toggle}
+            aria-label="Toggle theme"
             style={{
               border: `1px solid ${t.border}`,
-              background: t.cardBg,
+              background: t.bg,
               color: t.textSecondary,
               borderRadius: 10,
               padding: "8px 12px",
@@ -244,86 +364,134 @@ export default function PublicBooking() {
               fontFamily: "inherit",
             }}
           >
-            Theme
+            {dark ? "Light" : "Dark"}
           </button>
         </div>
+      </div>
+
+      <div style={{ maxWidth: 560, margin: "0 auto", padding: "20px 16px 48px" }}>
+        <p style={{ margin: "0 0 20px", color: t.textMuted, fontSize: 14, lineHeight: 1.5 }}>
+          Choose players, pick a time, and send your booking. We'll confirm soon.
+        </p>
 
         <form
           onSubmit={handleSubmit}
           style={{
             background: t.cardBg,
             border: `1px solid ${t.border}`,
-            borderRadius: 18,
-            padding: 24,
+            borderRadius: 20,
+            padding: "22px 20px 20px",
             boxShadow: t.cardShadow,
             display: "grid",
-            gap: 16,
+            gap: 28,
           }}
         >
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-            <div>
-              <label style={label}>First name *</label>
-              <input
-                style={inputStyle}
-                value={form.firstName}
-                onChange={(e) => handleChange("firstName", e.target.value)}
-                placeholder="Ali"
-                autoComplete="given-name"
-              />
+          <Section title="Your details">
+            <div className="pb-grid">
+              <div>
+                <label style={label}>First name *</label>
+                <input
+                  style={inputStyle}
+                  value={form.firstName}
+                  onChange={(e) => handleChange("firstName", e.target.value)}
+                  placeholder="Ali"
+                  autoComplete="given-name"
+                />
+              </div>
+              <div>
+                <label style={label}>Last name *</label>
+                <input
+                  style={inputStyle}
+                  value={form.lastName}
+                  onChange={(e) => handleChange("lastName", e.target.value)}
+                  placeholder="Hassan"
+                  autoComplete="family-name"
+                />
+              </div>
             </div>
             <div>
-              <label style={label}>Last name *</label>
+              <label style={label}>Phone number *</label>
               <input
                 style={inputStyle}
-                value={form.lastName}
-                onChange={(e) => handleChange("lastName", e.target.value)}
-                placeholder="Hassan"
-                autoComplete="family-name"
+                value={form.phone}
+                onChange={(e) => handleChange("phone", e.target.value)}
+                placeholder="+92 3xx xxxxxxx"
+                inputMode="tel"
+                autoComplete="tel"
               />
             </div>
-          </div>
+          </Section>
 
-          <div>
-            <label style={label}>Phone number *</label>
-            <input
-              style={inputStyle}
-              value={form.phone}
-              onChange={(e) => handleChange("phone", e.target.value)}
-              placeholder="+92 3xx xxxxxxx"
-              inputMode="tel"
-              autoComplete="tel"
-            />
-          </div>
-
-          <div>
-            <label style={label}>Number of players *</label>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <button
-                type="button"
-                onClick={() => handleChange("players", Math.max(1, Number(form.players || 1) - 1))}
-                style={{ ...inputStyle, width: 48, padding: 0, cursor: "pointer", fontSize: 20 }}
-              >
-                −
-              </button>
+          <Section title="Players" hint={`Slide or type a number. Maximum ${MAX_PLAYERS}.`}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 12,
+                padding: "14px 16px",
+                borderRadius: 14,
+                background: dark ? "rgba(255,255,255,0.03)" : "rgba(15,17,21,0.03)",
+                border: `1px solid ${t.border}`,
+              }}
+            >
+              <div>
+                <div style={{ fontSize: 12, color: t.textMuted }}>Selected</div>
+                <div style={{ fontSize: 28, fontWeight: 600, letterSpacing: -0.8, lineHeight: 1.1 }}>
+                  {clampPlayers(form.players)}
+                  <span style={{ fontSize: 13, fontWeight: 500, color: t.textMuted, marginLeft: 6 }}>
+                    / {MAX_PLAYERS}
+                  </span>
+                </div>
+              </div>
               <input
-                style={{ ...inputStyle, textAlign: "center" }}
+                aria-label="Type number of players"
+                style={{
+                  ...inputStyle,
+                  width: 72,
+                  textAlign: "center",
+                  fontSize: 18,
+                  fontWeight: 600,
+                  padding: "10px 8px",
+                }}
                 type="number"
-                min={1}
-                value={form.players}
-                onChange={(e) => handleChange("players", Math.max(1, Number(e.target.value) || 1))}
+                min={MIN_PLAYERS}
+                max={MAX_PLAYERS}
+                inputMode="numeric"
+                value={playersDraft}
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  if (raw === "") {
+                    setPlayersDraft("");
+                    return;
+                  }
+                  const n = Number(raw);
+                  if (!Number.isFinite(n)) return;
+                  const next = clampPlayers(n);
+                  handleChange("players", next);
+                  setPlayersDraft(String(next));
+                }}
+                onBlur={() => applyPlayers(playersDraft === "" ? MIN_PLAYERS : playersDraft)}
               />
-              <button
-                type="button"
-                onClick={() => handleChange("players", Number(form.players || 1) + 1)}
-                style={{ ...inputStyle, width: 48, padding: 0, cursor: "pointer", fontSize: 20 }}
-              >
-                +
-              </button>
             </div>
-          </div>
+            <input
+              className="pb-range"
+              type="range"
+              min={MIN_PLAYERS}
+              max={MAX_PLAYERS}
+              step={1}
+              value={clampPlayers(form.players)}
+              onChange={(e) => applyPlayers(e.target.value)}
+              aria-label="Players slider"
+            />
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: t.textMuted }}>
+              <span>{MIN_PLAYERS}</span>
+              <span>5</span>
+              <span>{MAX_PLAYERS}</span>
+            </div>
+          </Section>
 
-          <div>
-            <label style={label}>Open times</label>
+          <Section title="Date & time" hint="Tap an open day, then a time.">
             {loadingSlots ? (
               <div style={{ fontSize: 13, color: t.textMuted }}>Loading availability…</div>
             ) : slotsError ? (
@@ -333,8 +501,8 @@ export default function PublicBooking() {
                 No set times yet — choose any date and time below.
               </div>
             ) : (
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                {availableDates.slice(0, 12).map((d) => {
+              <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4 }}>
+                {availableDates.slice(0, 14).map((d) => {
                   const active = form.date === d;
                   return (
                     <button
@@ -345,81 +513,114 @@ export default function PublicBooking() {
                         handleChange("time", "");
                       }}
                       style={{
-                        padding: "8px 12px",
-                        borderRadius: 999,
+                        flex: "0 0 auto",
+                        padding: "10px 14px",
+                        borderRadius: 14,
                         border: `1px solid ${active ? t.accent : t.border}`,
                         background: active ? t.accentGlow : "transparent",
                         color: t.textPrimary,
-                        fontSize: 12,
+                        fontSize: 13,
+                        fontWeight: 500,
                         cursor: "pointer",
                         fontFamily: "inherit",
+                        textAlign: "left",
                       }}
                     >
-                      {formatDateLabel(d)} · {(slotsByDate[d] || []).length} open
+                      <div>{formatDateChip(d)}</div>
+                      <div style={{ fontSize: 11, color: t.textMuted, marginTop: 2 }}>
+                        {(slotsByDate[d] || []).length} open
+                      </div>
                     </button>
                   );
                 })}
               </div>
             )}
-          </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-            <div>
-              <label style={label}>Booking date * (dd/mm/yyyy)</label>
-              {availableDates.length > 0 ? (
-                <select
-                  style={inputStyle}
-                  value={form.date}
-                  onChange={(e) => {
-                    handleChange("date", e.target.value);
-                    handleChange("time", "");
-                  }}
-                >
-                  <option value="">Select date</option>
-                  {availableDates.map((d) => (
-                    <option key={d} value={d}>
-                      {formatDateLabel(d)}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <input
-                  style={inputStyle}
-                  type="date"
-                  value={form.date}
-                  onChange={(e) => handleChange("date", e.target.value)}
-                />
-              )}
-            </div>
-            <div>
-              <label style={label}>Booking time * (hh:mm)</label>
-              {timesForDate.length > 0 ? (
-                <select
-                  style={inputStyle}
-                  value={form.time}
-                  onChange={(e) => handleChange("time", e.target.value)}
-                >
-                  <option value="">Select time</option>
-                  {timesForDate.map((tm) => (
-                    <option key={tm} value={tm}>
+            {form.date && timesForDate.length > 0 && (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {timesForDate.map((tm) => {
+                  const active = form.time === tm;
+                  return (
+                    <button
+                      key={tm}
+                      type="button"
+                      onClick={() => handleChange("time", tm)}
+                      style={{
+                        padding: "10px 14px",
+                        borderRadius: 999,
+                        border: `1px solid ${active ? t.accent : t.border}`,
+                        background: active ? t.accent : "transparent",
+                        color: active ? "#fff" : t.textPrimary,
+                        fontSize: 13,
+                        fontWeight: 500,
+                        cursor: "pointer",
+                        fontFamily: "inherit",
+                      }}
+                    >
                       {tm}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <input
-                  style={inputStyle}
-                  type="time"
-                  value={form.time}
-                  onChange={(e) => handleChange("time", e.target.value)}
-                />
-              )}
-            </div>
-          </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
 
-          <div>
-            <label style={label}>Payment mode *</label>
-            <div style={{ display: "flex", gap: 8 }}>
+            <div className="pb-grid">
+              <div>
+                <label style={label}>Date * (dd/mm/yyyy)</label>
+                {availableDates.length > 0 ? (
+                  <select
+                    style={inputStyle}
+                    value={form.date}
+                    onChange={(e) => {
+                      handleChange("date", e.target.value);
+                      handleChange("time", "");
+                    }}
+                  >
+                    <option value="">Select date</option>
+                    {availableDates.map((d) => (
+                      <option key={d} value={d}>
+                        {formatDateLabel(d)}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    style={inputStyle}
+                    type="date"
+                    value={form.date}
+                    onChange={(e) => handleChange("date", e.target.value)}
+                  />
+                )}
+              </div>
+              <div>
+                <label style={label}>Time * (hh:mm)</label>
+                {timesForDate.length > 0 ? (
+                  <select
+                    style={inputStyle}
+                    value={form.time}
+                    onChange={(e) => handleChange("time", e.target.value)}
+                  >
+                    <option value="">Select time</option>
+                    {timesForDate.map((tm) => (
+                      <option key={tm} value={tm}>
+                        {tm}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    style={inputStyle}
+                    type="time"
+                    value={form.time}
+                    onChange={(e) => handleChange("time", e.target.value)}
+                  />
+                )}
+              </div>
+            </div>
+          </Section>
+
+          <Section title="Payment">
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
               {PAYMENT_MODES.map((mode) => {
                 const active = form.paymentMode === mode;
                 return (
@@ -428,15 +629,15 @@ export default function PublicBooking() {
                     type="button"
                     onClick={() => handleChange("paymentMode", mode)}
                     style={{
-                      flex: 1,
-                      padding: "12px 10px",
-                      borderRadius: 12,
-                      border: `1px solid ${active ? t.accent : t.border}`,
+                      padding: "14px 10px",
+                      borderRadius: 14,
+                      border: `1.5px solid ${active ? t.accent : t.border}`,
                       background: active ? t.accentGlow : "transparent",
                       color: t.textPrimary,
-                      fontWeight: 500,
+                      fontWeight: 600,
                       cursor: "pointer",
                       fontFamily: "inherit",
+                      fontSize: 14,
                     }}
                   >
                     {mode}
@@ -444,7 +645,7 @@ export default function PublicBooking() {
                 );
               })}
             </div>
-          </div>
+          </Section>
 
           {error && (
             <div
@@ -453,8 +654,9 @@ export default function PublicBooking() {
                 borderRadius: 12,
                 background: "rgba(239,68,68,0.1)",
                 border: "1px solid rgba(239,68,68,0.3)",
-                color: "#fca5a5",
+                color: dark ? "#fca5a5" : "#b91c1c",
                 fontSize: 13,
+                lineHeight: 1.45,
               }}
             >
               {error}
@@ -465,14 +667,13 @@ export default function PublicBooking() {
             type="submit"
             disabled={submitting}
             style={{
-              marginTop: 4,
               width: "100%",
-              padding: "14px 16px",
-              borderRadius: 12,
+              padding: "15px 16px",
+              borderRadius: 14,
               border: "none",
               background: t.accent,
               color: "#fff",
-              fontSize: 15,
+              fontSize: 16,
               fontWeight: 600,
               cursor: submitting ? "wait" : "pointer",
               opacity: submitting ? 0.7 : 1,
