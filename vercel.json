@@ -15,6 +15,10 @@
     {
       "source": "/api/:path(.*)",
       "destination": "https://slippy-goalz-backend-production.up.railway.app/:path"
+    },
+    {
+      "source": "/((?!api/).*)",
+      "destination": "/index.html"
     }
   ]
 }
