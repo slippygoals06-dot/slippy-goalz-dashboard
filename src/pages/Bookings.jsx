@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import {
   Check,
@@ -459,16 +460,9 @@ function AddField({ label, children, span = 1, t }) {
 function RowActionsMenu({ booking, onView, onComplete, onInvoice, onDelete, onConfirm, onReject }) {
   const { theme: t } = useTheme();
   const [open, setOpen] = useState(false);
-  const ref = useRef(null);
-
-  useEffect(() => {
-    if (!open) return;
-    function onDoc(e) {
-      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
-    }
-    document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
-  }, [open]);
+  const [pos, setPos] = useState({ top: 0, right: 8 });
+  const btnRef = useRef(null);
+  const menuRef = useRef(null);
 
   const items = [
     { label: "View", icon: Eye, onClick: () => onView?.(booking) },
@@ -501,11 +495,50 @@ function RowActionsMenu({ booking, onView, onComplete, onInvoice, onDelete, onCo
     },
   ].filter(Boolean);
 
+  const placeMenu = useCallback(() => {
+    const btn = btnRef.current;
+    if (!btn) return;
+    const r = btn.getBoundingClientRect();
+    const menuH = items.length * 40 + 16;
+    const openUp = window.innerHeight - r.bottom < menuH + 12 && r.top > menuH;
+    setPos({
+      top: openUp ? Math.max(8, r.top - menuH - 8) : r.bottom + 8,
+      right: Math.max(8, window.innerWidth - r.right),
+    });
+  }, [items.length]);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    placeMenu();
+  }, [open, placeMenu]);
+
+  useEffect(() => {
+    if (!open) return;
+    function onDoc(e) {
+      if (btnRef.current?.contains(e.target) || menuRef.current?.contains(e.target)) return;
+      setOpen(false);
+    }
+    function onKey(e) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("mousedown", onDoc);
+    document.addEventListener("keydown", onKey);
+    window.addEventListener("resize", placeMenu);
+    window.addEventListener("scroll", placeMenu, true);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("keydown", onKey);
+      window.removeEventListener("resize", placeMenu);
+      window.removeEventListener("scroll", placeMenu, true);
+    };
+  }, [open, placeMenu]);
+
   return (
-    <div ref={ref} style={{ position: "relative" }}>
+    <div style={{ position: "relative", display: "inline-flex" }}>
       <button
+        ref={btnRef}
         type="button"
-        className="bk-icon-btn"
+        className={`bk-icon-btn${open ? " bk-icon-btn--open" : ""}`}
         title="Actions"
         aria-haspopup="menu"
         aria-expanded={open}
@@ -516,64 +549,68 @@ function RowActionsMenu({ booking, onView, onComplete, onInvoice, onDelete, onCo
       >
         <MoreHorizontal size={16} strokeWidth={2} />
       </button>
-      {open && (
-        <div
-          role="menu"
-          style={{
-            position: "absolute",
-            right: 0,
-            top: "100%",
-            marginTop: 6,
-            minWidth: 168,
-            padding: 6,
-            borderRadius: 12,
-            background: t.cardBg,
-            border: `1px solid ${t.border}`,
-            boxShadow: t.cardShadowHover || t.cardShadow,
-            zIndex: 30,
-          }}
-        >
-          {items.map((item) => (
-            <button
-              key={item.label}
-              type="button"
-              role="menuitem"
-              className="ui-press"
-              onClick={(e) => {
-                e.stopPropagation();
-                setOpen(false);
-                item.onClick?.();
-              }}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                width: "100%",
-                padding: "10px 12px",
-                borderRadius: 8,
-                border: "none",
-                background: "transparent",
-                color: item.danger ? "#f87171" : t.textPrimary,
-                fontSize: 13,
-                fontWeight: 400,
-                cursor: "pointer",
-                textAlign: "left",
-                fontFamily: "inherit",
-                transition: "background 150ms cubic-bezier(0.2, 0, 0, 1)",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = t.rowHover;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = "transparent";
-              }}
-            >
-              <item.icon size={14} strokeWidth={2} />
-              {item.label}
-            </button>
-          ))}
-        </div>
-      )}
+      {open &&
+        createPortal(
+          <div
+            ref={menuRef}
+            role="menu"
+            style={{
+              position: "fixed",
+              top: pos.top,
+              right: pos.right,
+              zIndex: 4000,
+              width: 200,
+              padding: 8,
+              borderRadius: 12,
+              background: t.cardBg,
+              border: `1px solid ${t.border}`,
+              boxShadow: t.cardShadowHover || t.cardShadow,
+              overflow: "visible",
+            }}
+          >
+            {items.map((item) => (
+              <button
+                key={item.label}
+                type="button"
+                role="menuitem"
+                className="ui-press"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setOpen(false);
+                  item.onClick?.();
+                }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  width: "100%",
+                  height: 40,
+                  padding: "0 12px",
+                  borderRadius: 8,
+                  border: "none",
+                  background: "transparent",
+                  color: item.danger ? "#E11D48" : t.textPrimary,
+                  fontSize: 13,
+                  fontWeight: 500,
+                  cursor: "pointer",
+                  textAlign: "left",
+                  fontFamily: "inherit",
+                  whiteSpace: "nowrap",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = t.rowHover;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "transparent";
+                }}
+              >
+                <item.icon size={15} strokeWidth={2} />
+                {item.label}
+              </button>
+            ))}
+          </div>,
+          document.body
+        )}
     </div>
   );
 }
@@ -1433,7 +1470,8 @@ export default function Bookings() {
         }
         .bk-row:hover .bk-icon-btn,
         .bk-row:focus-within .bk-icon-btn,
-        .bk-row.bk-row--focused .bk-icon-btn {
+        .bk-row.bk-row--focused .bk-icon-btn,
+        .bk-icon-btn.bk-icon-btn--open {
           opacity: 1;
         }
         .bk-icon-btn:hover {
