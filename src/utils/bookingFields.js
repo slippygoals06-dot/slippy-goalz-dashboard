@@ -2,6 +2,16 @@
 
 export const PAYMENT_STATUSES = ["Unpaid", "Half Payment", "Full Payment"];
 export const PAYMENT_MODES = ["Cash", "Online"];
+export const HEARD_FROM_OPTIONS = [
+  "Instagram",
+  "Facebook",
+  "WhatsApp",
+  "Google",
+  "TikTok",
+  "Friend",
+  "Walked past",
+  "Other",
+];
 export const SERVICE_LABEL = "Pitch booking";
 export const MIN_PLAYERS = 1;
 export const MAX_PLAYERS = 10;

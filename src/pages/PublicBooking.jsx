@@ -5,6 +5,7 @@ import { BUSINESS_NAME } from "../constants/brand";
 import {
   toApiPayload,
   PAYMENT_MODES,
+  HEARD_FROM_OPTIONS,
   joinName,
   clampPlayers,
   MIN_PLAYERS,
@@ -88,6 +89,8 @@ export default function PublicBooking() {
     phone: "",
     players: MAX_PLAYERS,
     paymentMode: "Cash",
+    heardFrom: "",
+    heardFromOther: "",
     date: "",
     time: "",
   });
@@ -163,6 +166,14 @@ export default function PublicBooking() {
       setError("Please choose a payment mode.");
       return false;
     }
+    if (!form.heardFrom) {
+      setError("Please tell us where you heard about us.");
+      return false;
+    }
+    if (form.heardFrom === "Other" && !form.heardFromOther.trim()) {
+      setError("Please tell us where you heard about us.");
+      return false;
+    }
     setError("");
     return true;
   }
@@ -184,7 +195,10 @@ export default function PublicBooking() {
       time: form.time,
       notes: null,
       status: "Pending",
-      source: "Public book",
+      source:
+        form.heardFrom === "Other"
+          ? form.heardFromOther.trim().slice(0, 40)
+          : form.heardFrom,
     });
 
     try {
@@ -639,6 +653,33 @@ export default function PublicBooking() {
                   autoComplete="tel"
                 />
               </div>
+              <div style={{ marginTop: 16 }}>
+                <label style={label}>Where did you hear about us? *</label>
+                <select
+                  style={{ ...inputStyle, cursor: "pointer" }}
+                  value={form.heardFrom}
+                  onChange={(e) => handleChange("heardFrom", e.target.value)}
+                >
+                  <option value="">Select one</option>
+                  {HEARD_FROM_OPTIONS.map((opt) => (
+                    <option key={opt} value={opt}>
+                      {opt}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {form.heardFrom === "Other" && (
+                <div style={{ marginTop: 16 }}>
+                  <label style={label}>Tell us where *</label>
+                  <input
+                    style={inputStyle}
+                    value={form.heardFromOther}
+                    onChange={(e) => handleChange("heardFromOther", e.target.value.slice(0, 40))}
+                    placeholder="e.g. YouTube, poster, event"
+                    maxLength={40}
+                  />
+                </div>
+              )}
             </section>
 
             <section>
