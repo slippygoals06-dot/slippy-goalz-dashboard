@@ -1,4 +1,4 @@
-﻿/** Map Slippy Goalz booking UI <-> existing /bookings API columns. */
+/** Map Slippy Goalz booking UI <-> existing /bookings API columns. */
 
 export const PAYMENT_STATUSES = ["Unpaid", "Half Payment", "Full Payment"];
 export const PAYMENT_MODES = ["Cash", "Online"];
@@ -68,11 +68,12 @@ export function toApiPayload({
     device: playersToDevice(players),
     service: SERVICE_LABEL,
     issue: mode,
+    payment_mode: mode,
     date: String(date || "").trim(),
     time: String(time || "").trim(),
-    payment_status: normalizePaymentStatus(paymentStatus),
+    payment_status: "Unpaid",
     notes: notes ? String(notes).trim() : null,
-    status,
+    status: "Pending",
   };
   if (source) body.source = source;
   return body;

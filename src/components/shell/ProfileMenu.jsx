@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronDown, LogOut, Settings, Moon, Sun } from "lucide-react";
 import { useTheme } from "../../context/ThemeContext";
+import { useSecurity } from "../../context/SecurityContext";
 import { BUSINESS_NAME } from "../../constants/brand";
 import { SHELL, hoverFill, iconButtonStyle } from "./shellTokens";
 
@@ -10,6 +11,7 @@ import { SHELL, hoverFill, iconButtonStyle } from "./shellTokens";
  */
 export default function ProfileMenu({ compact = false, align = "left" }) {
   const { theme: t, dark, toggle } = useTheme();
+  const { logout } = useSecurity();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
@@ -30,11 +32,6 @@ export default function ProfileMenu({ compact = false, align = "left" }) {
       document.removeEventListener("keydown", onKey);
     };
   }, [open]);
-
-  const logout = () => {
-    localStorage.removeItem("auth");
-    navigate("/login");
-  };
 
   const menu = open && (
     <div
@@ -105,7 +102,7 @@ export default function ProfileMenu({ compact = false, align = "left" }) {
         type="button"
         role="menuitem"
         className="ds-dropdown__item ds-dropdown__item--danger"
-        onClick={logout}
+        onClick={() => logout("Manual logout")}
       >
         <LogOut size={SHELL.iconSm} strokeWidth={SHELL.iconStroke} />
         Sign out

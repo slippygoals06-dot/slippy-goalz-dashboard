@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect } from "react";
-import { useStore } from "../store/useStore";
 import { useTheme, primaryBtnStyle, secondaryBtnStyle } from "../context/ThemeContext";
 import { FabSparkle, CloseIcon } from "./icons";
 import { API_URL } from "../config";
@@ -13,21 +12,6 @@ const QUICK_PROMPTS = [
 
 export default function OwnerBot() {
   const { theme: t } = useTheme();
-  const bookings = useStore((s) => s.bookings || []);
-  const slots = useStore((s) => s.slots || []);
-  const leads = useStore((s) => s.leads || []);
-
-  const SERVICE_PRICES = {
-    "Screen Repair": 5000,
-    "Battery Replacement": 2500,
-    "Software Fix": 1500,
-    "Water Damage": 8000,
-    "Charging Port": 3000,
-    "Camera Repair": 4000,
-  };
-  const revenue = bookings
-    .filter((b) => b.Status === "Confirmed")
-    .reduce((s, b) => s + (SERVICE_PRICES[b.Service] || 0), 0);
 
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState([
@@ -67,7 +51,7 @@ export default function OwnerBot() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${localStorage.getItem("slippy_token")}`,
         },
-        body: JSON.stringify({ messages: history, context: { bookings, slots, leads, revenue } }),
+        body: JSON.stringify({ messages: history }),
       });
 
       if (!res.ok) throw new Error(`API error ${res.status}`);
@@ -181,7 +165,7 @@ export default function OwnerBot() {
                   }}
                 />
                 <p style={{ margin: 0, fontSize: 11, color: t.textSecondary }}>
-                  {bookings.length} bookings · {leads.length} leads in context
+                  Live shop data loaded on the server
                 </p>
               </div>
             </div>

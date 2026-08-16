@@ -1,10 +1,21 @@
 import { API_URL } from "./config";
 
-// Store token in localStorage
 const getToken = () => localStorage.getItem("slippy_token");
 const setToken = (token) => localStorage.setItem("slippy_token", token);
 
-// Base fetch with auth
+export function clearToken() {
+  localStorage.removeItem("slippy_token");
+  localStorage.removeItem("auth");
+  localStorage.removeItem("slippy_session");
+}
+
+function handleUnauthorized() {
+  clearToken();
+  if (typeof window !== "undefined" && !window.location.pathname.startsWith("/login")) {
+    window.location.assign("/login");
+  }
+}
+
 async function apiFetch(endpoint, options = {}) {
   const token = getToken();
   const res = await fetch(`${API_URL}${endpoint}`, {
@@ -15,6 +26,9 @@ async function apiFetch(endpoint, options = {}) {
       ...options.headers,
     },
   });
+  if (res.status === 401) {
+    handleUnauthorized();
+  }
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     const detail = err.detail;

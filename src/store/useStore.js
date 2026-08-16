@@ -3,6 +3,7 @@ import { useNotifStore } from "./useNotifStore";
 import { devtools } from "zustand/middleware";
 import { toApiPayload } from "../utils/bookingFields";
 import { API_URL as API } from "../config";
+import { clearToken } from "../api";
 
 let fetchingRef = false;
 let prevPending = null;
@@ -94,6 +95,12 @@ const apiCall = async (path, options = {}) => {
       ...(options.headers || {}),
     },
   });
+  if (res.status === 401) {
+    clearToken();
+    if (!window.location.pathname.startsWith("/login")) {
+      window.location.assign("/login");
+    }
+  }
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     const detail = err.detail;

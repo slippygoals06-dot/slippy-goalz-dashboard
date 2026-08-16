@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Moon, Sun } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
 import { BUSINESS_NAME } from "../constants/brand";
 import {
@@ -18,11 +19,14 @@ function formatDateLabel(iso) {
   return `${d}/${m}/${y}`;
 }
 
-function formatDateChip(iso) {
-  if (!iso) return "";
+function formatDateParts(iso) {
+  if (!iso) return { day: "", date: "" };
   const d = new Date(`${iso}T12:00:00`);
-  if (Number.isNaN(d.getTime())) return formatDateLabel(iso);
-  return d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+  if (Number.isNaN(d.getTime())) return { day: "", date: formatDateLabel(iso) };
+  return {
+    day: d.toLocaleDateString("en-GB", { weekday: "short" }).toUpperCase(),
+    date: d.toLocaleDateString("en-GB", { day: "numeric", month: "short" }).toUpperCase(),
+  };
 }
 
 function networkErrorMessage(err) {
@@ -33,25 +37,46 @@ function networkErrorMessage(err) {
   return msg || "Something went wrong. Please try again.";
 }
 
-function Section({ title, hint, children }) {
-  const { theme: t } = useTheme();
-  return (
-    <section style={{ display: "grid", gap: 12 }}>
-      <div>
-        <div style={{ fontSize: 13, fontWeight: 600, color: t.textPrimary, letterSpacing: -0.2 }}>
-          {title}
-        </div>
-        {hint && (
-          <div style={{ marginTop: 4, fontSize: 12, color: t.textMuted, lineHeight: 1.4 }}>{hint}</div>
-        )}
-      </div>
-      {children}
-    </section>
-  );
+function bookingPalette(dark) {
+  if (dark) {
+    return {
+      page: "#0B0B0C",
+      header: "#0B0B0C",
+      form: "#111112",
+      input: "#181819",
+      text: "#F4F4F5",
+      secondary: "#A1A1AA",
+      muted: "#71717A",
+      border: "#27272A",
+      accent: "#F43F5E",
+      accentHover: "#FB7185",
+      accentSoft: "rgba(244,63,94,0.10)",
+      errorBg: "rgba(244,63,94,0.08)",
+      errorText: "#FCA5A5",
+      noticeBg: "#181819",
+    };
+  }
+  return {
+    page: "#F7F7F8",
+    header: "#FFFFFF",
+    form: "#FFFFFF",
+    input: "#FAFAFA",
+    text: "#18181B",
+    secondary: "#52525B",
+    muted: "#71717A",
+    border: "#E4E4E7",
+    accent: "#E93656",
+    accentHover: "#F43F5E",
+    accentSoft: "rgba(233,54,86,0.08)",
+    errorBg: "rgba(233,54,86,0.08)",
+    errorText: "#BE123C",
+    noticeBg: "#FAFAFA",
+  };
 }
 
 export default function PublicBooking() {
-  const { theme: t, dark, toggle } = useTheme();
+  const { dark, toggle } = useTheme();
+  const c = bookingPalette(dark);
 
   const [slots, setSlots] = useState([]);
   const [loadingSlots, setLoadingSlots] = useState(true);
@@ -87,22 +112,9 @@ export default function PublicBooking() {
         const remote = Array.isArray(data)
           ? data.filter((s) => s.Status === "Available" && s.Date && String(s.Date) >= todayKey)
           : [];
-        let local = [];
-        try {
-          local = JSON.parse(localStorage.getItem("slippy_local_slots") || "[]");
-        } catch {
-          local = [];
-        }
-        const map = new Map();
-        [...remote, ...(Array.isArray(local) ? local : [])].forEach((s) => {
-          if (!s?.Date || !s?.Time) return;
-          if (s.Status !== "Available") return;
-          if (String(s.Date) < todayKey) return;
-          map.set(`${s.Date}|${s.Time}`, s);
-        });
-        setSlots([...map.values()]);
+        setSlots(remote);
       } catch {
-        setSlotsError("Couldn't load live times — pick a date and time and we'll confirm.");
+        setSlotsError("Couldn't load live availability.");
       } finally {
         setLoadingSlots(false);
       }
@@ -202,22 +214,37 @@ export default function PublicBooking() {
 
   const inputStyle = {
     width: "100%",
-    padding: "13px 15px",
-    borderRadius: 12,
-    background: dark ? "rgba(255,255,255,0.04)" : "#f8f9fe",
-    border: `1.5px solid ${t.border}`,
-    color: t.textPrimary,
+    height: 54,
+    padding: "0 16px",
+    borderRadius: 10,
+    background: c.input,
+    border: `1px solid ${c.border}`,
+    color: c.text,
     fontSize: 15,
     outline: "none",
     fontFamily: "inherit",
     boxSizing: "border-box",
+    transition: "border-color 180ms ease, background-color 180ms ease",
   };
   const label = {
     display: "block",
-    fontSize: 12.5,
+    fontSize: 13,
     fontWeight: 500,
-    color: t.textSecondary,
+    color: c.secondary,
     marginBottom: 8,
+  };
+  const sectionTitle = {
+    fontSize: 17,
+    fontWeight: 600,
+    color: c.text,
+    letterSpacing: -0.2,
+    margin: 0,
+  };
+  const sectionHint = {
+    margin: "6px 0 0",
+    fontSize: 13,
+    color: c.muted,
+    lineHeight: 1.45,
   };
 
   if (done) {
@@ -225,52 +252,35 @@ export default function PublicBooking() {
       <div
         style={{
           minHeight: "100vh",
-          background: t.bg,
-          color: t.textPrimary,
+          background: c.page,
+          color: c.text,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
           padding: 24,
           fontFamily: "inherit",
+          transition: "background-color 180ms ease, color 180ms ease",
         }}
       >
         <div
           style={{
             maxWidth: 440,
             width: "100%",
-            background: t.cardBg,
-            border: `1px solid ${t.border}`,
-            borderRadius: 20,
-            padding: 36,
+            background: c.form,
+            border: `1px solid ${c.border}`,
+            borderRadius: 16,
+            padding: "32px 28px",
             textAlign: "center",
-            boxShadow: t.cardShadow,
           }}
         >
-          <div
-            style={{
-              width: 56,
-              height: 56,
-              borderRadius: "50%",
-              margin: "0 auto 18px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              background: t.accentGlow,
-              color: t.accent,
-              fontSize: 24,
-              fontWeight: 600,
-            }}
-          >
-            ✓
-          </div>
-          <div style={{ fontSize: 26, fontWeight: 600, marginBottom: 10, letterSpacing: -0.5 }}>
+          <div style={{ fontSize: 22, fontWeight: 600, marginBottom: 10, letterSpacing: -0.4 }}>
             Booking sent
           </div>
-          <p style={{ margin: 0, color: t.textMuted, lineHeight: 1.55, fontSize: 14 }}>
+          <p style={{ margin: 0, color: c.secondary, lineHeight: 1.55, fontSize: 14 }}>
             Thanks {joinName(form.firstName, form.lastName)}. Your booking for{" "}
-            <strong style={{ color: t.textPrimary }}>{formatDateLabel(form.date)}</strong> at{" "}
-            <strong style={{ color: t.textPrimary }}>{form.time}</strong> for{" "}
-            <strong style={{ color: t.textPrimary }}>{clampPlayers(form.players)} players</strong> is
+            <span style={{ color: c.text, fontWeight: 500 }}>{formatDateLabel(form.date)}</span> at{" "}
+            <span style={{ color: c.text, fontWeight: 500 }}>{form.time}</span> for{" "}
+            <span style={{ color: c.text, fontWeight: 500 }}>{clampPlayers(form.players)} players</span> is
             with the {BUSINESS_NAME} team. We'll confirm shortly.
           </p>
         </div>
@@ -280,414 +290,642 @@ export default function PublicBooking() {
 
   return (
     <div
+      className="pb-page"
       style={{
         minHeight: "100vh",
-        background: t.bg,
-        color: t.textPrimary,
+        background: c.page,
+        color: c.text,
         fontFamily: "inherit",
+        transition: "background-color 180ms ease, color 180ms ease",
       }}
     >
       <style>{`
+        .pb-page,
+        .pb-page *,
+        .pb-page *::before,
+        .pb-page *::after {
+          box-sizing: border-box;
+        }
+        .pb-page {
+          overflow-x: hidden;
+        }
+        .pb-form {
+          width: 100%;
+          max-width: 100%;
+          min-width: 0;
+          overflow: hidden;
+        }
+        .pb-form section,
+        .pb-form .pb-grid,
+        .pb-form .pb-dt-dates,
+        .pb-form .pb-dt-times {
+          min-width: 0;
+          max-width: 100%;
+        }
+        .pb-page input,
+        .pb-page select,
+        .pb-page button {
+          max-width: 100%;
+        }
+        .pb-page input::placeholder,
+        .pb-page textarea::placeholder {
+          color: ${c.muted};
+        }
+        .pb-page input:focus,
+        .pb-page select:focus {
+          border-color: ${c.accent} !important;
+        }
         .pb-range {
           -webkit-appearance: none;
           appearance: none;
+          display: block;
           width: 100%;
-          height: 6px;
+          max-width: 100%;
+          height: 4px;
           border-radius: 999px;
-          background: linear-gradient(
-            to right,
-            ${t.accent} 0%,
-            ${t.accent} ${((clampPlayers(form.players) - 1) / (MAX_PLAYERS - 1)) * 100}%,
-            ${dark ? "rgba(255,255,255,0.12)" : "rgba(15,17,21,0.12)"} ${((clampPlayers(form.players) - 1) / (MAX_PLAYERS - 1)) * 100}%,
-            ${dark ? "rgba(255,255,255,0.12)" : "rgba(15,17,21,0.12)"} 100%
-          );
+          background: ${c.border};
           outline: none;
+          margin: 4px 0 0;
         }
         .pb-range::-webkit-slider-thumb {
           -webkit-appearance: none;
           appearance: none;
-          width: 22px;
-          height: 22px;
+          width: 18px;
+          height: 18px;
           border-radius: 50%;
-          background: ${t.accent};
-          border: 3px solid ${dark ? "#1a1d24" : "#fff"};
-          box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+          background: ${c.accent};
+          border: 0;
           cursor: pointer;
+          transition: transform 150ms ease;
+        }
+        .pb-range::-webkit-slider-thumb:hover {
+          transform: scale(1.08);
         }
         .pb-range::-moz-range-thumb {
-          width: 22px;
-          height: 22px;
+          width: 18px;
+          height: 18px;
           border-radius: 50%;
-          background: ${t.accent};
-          border: 3px solid ${dark ? "#1a1d24" : "#fff"};
-          box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+          background: ${c.accent};
+          border: 0;
           cursor: pointer;
         }
         .pb-grid {
           display: grid;
-          grid-template-columns: 1fr 1fr;
+          grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+          gap: 16px;
+          width: 100%;
+        }
+        .pb-grid > * {
+          min-width: 0;
+        }
+        .pb-submit:hover:not(:disabled) {
+          background: ${c.accentHover} !important;
+        }
+        .pb-submit:active:not(:disabled) {
+          transform: scale(0.985);
+        }
+        .pb-theme:hover {
+          border-color: ${c.secondary} !important;
+        }
+        .pb-pay, .pb-date-card, .pb-time-slot {
+          transition: border-color 180ms ease, background-color 180ms ease, color 180ms ease;
+        }
+        .pb-date-card:focus-visible,
+        .pb-time-slot:focus-visible {
+          outline: 2px solid ${c.accent};
+          outline-offset: 2px;
+        }
+        .pb-date-card:hover:not([aria-pressed="true"]) {
+          border-color: ${dark ? "#3F3F46" : "#D4D4D8"} !important;
+          background: ${dark ? "#1A1A1C" : "#FAFAFA"} !important;
+        }
+        .pb-time-slot:hover:not([aria-pressed="true"]) {
+          border-color: ${dark ? "#3F3F46" : "#D4D4D8"} !important;
+          background: ${dark ? "#1A1A1C" : "#FAFAFA"} !important;
+        }
+        .pb-dt-dates {
+          display: grid;
+          grid-template-columns: repeat(5, minmax(0, 1fr));
           gap: 12px;
+          width: 100%;
+        }
+        .pb-dt-times {
+          display: grid;
+          grid-template-columns: repeat(5, minmax(0, 1fr));
+          gap: 12px;
+          width: 100%;
+        }
+        .pb-date-card {
+          display: flex;
+          flex-direction: column;
+          align-items: flex-start;
+          justify-content: center;
+          min-height: 74px;
+          min-width: 0;
+          width: 100%;
+          padding: 10px 12px;
+          border-radius: 10px;
+          cursor: pointer;
+          font-family: inherit;
+          text-align: left;
+        }
+        .pb-time-slot {
+          height: 46px;
+          min-width: 0;
+          width: 100%;
+          padding: 0 10px;
+          border-radius: 10px;
+          cursor: pointer;
+          font-family: inherit;
+          font-size: 14px;
+          font-weight: 500;
+        }
+        .pb-skel {
+          border-radius: 10px;
+          background: ${dark ? "#1A1A1C" : "#F4F4F5"};
+          animation: pb-skel 1.2s ease infinite;
+        }
+        @keyframes pb-skel {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.55; }
+        }
+        @media (max-width: 1099px) {
+          .pb-dt-dates { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+          .pb-dt-times { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+        }
+        @media (max-width: 767px) {
+          .pb-dt-dates {
+            display: flex;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            gap: 10px;
+            padding-bottom: 2px;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+          }
+          .pb-dt-dates::-webkit-scrollbar { height: 0; }
+          .pb-date-card,
+          .pb-skel-date {
+            flex: 0 0 112px;
+            width: 112px;
+          }
+          .pb-dt-times { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        }
+        @media (max-width: 420px) {
+          .pb-dt-times { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
+        @media (max-width: 1024px) {
+          .pb-intro-title { font-size: 36px !important; }
+        }
+        @media (max-width: 768px) {
+          .pb-intro-title { font-size: 32px !important; }
+          .pb-form { padding: 20px 16px !important; }
+          .pb-page main { padding: 28px 16px 48px !important; }
+          .pb-grid { grid-template-columns: 1fr; }
         }
         @media (max-width: 520px) {
-          .pb-grid { grid-template-columns: 1fr; }
+          .pb-intro-title { font-size: 28px !important; }
+          .pb-header-inner { padding: 0 16px !important; }
         }
       `}</style>
 
-      <div
+      <header
         style={{
-          background: t.cardBg,
-          borderBottom: `1px solid ${t.border}`,
-          padding: "18px 16px",
+          background: c.header,
+          borderBottom: `1px solid ${c.border}`,
+          transition: "background-color 180ms ease, border-color 180ms ease",
         }}
       >
-        <div style={{ maxWidth: 560, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-          <div>
-            <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 1.4, color: t.accent, textTransform: "uppercase" }}>
-              {BUSINESS_NAME}
-            </div>
-            <h1 style={{ margin: "4px 0 0", fontSize: 22, fontWeight: 600, letterSpacing: -0.5 }}>
-              Book a pitch
-            </h1>
+        <div
+          className="pb-header-inner"
+          style={{
+            maxWidth: 1120,
+            margin: "0 auto",
+            padding: "0 32px",
+            height: 64,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: 12,
+          }}
+        >
+          <div
+            style={{
+              fontSize: 13,
+              fontWeight: 600,
+              letterSpacing: 1.4,
+              color: c.text,
+              textTransform: "uppercase",
+            }}
+          >
+            {BUSINESS_NAME}
           </div>
           <button
             type="button"
+            className="pb-theme"
             onClick={toggle}
-            aria-label="Toggle theme"
+            aria-label={dark ? "Switch to light theme" : "Switch to dark theme"}
             style={{
-              border: `1px solid ${t.border}`,
-              background: t.bg,
-              color: t.textSecondary,
-              borderRadius: 10,
-              padding: "8px 12px",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              height: 36,
+              padding: "0 12px",
+              border: `1px solid ${c.border}`,
+              background: "transparent",
+              color: c.secondary,
+              borderRadius: 8,
               cursor: "pointer",
-              fontSize: 12,
+              fontSize: 13,
               fontFamily: "inherit",
+              transition: "border-color 180ms ease, color 180ms ease",
             }}
           >
+            {dark ? <Sun size={14} strokeWidth={1.75} /> : <Moon size={14} strokeWidth={1.75} />}
             {dark ? "Light" : "Dark"}
           </button>
         </div>
-      </div>
+      </header>
 
-      <div style={{ maxWidth: 560, margin: "0 auto", padding: "20px 16px 48px" }}>
-        <p style={{ margin: "0 0 20px", color: t.textMuted, fontSize: 14, lineHeight: 1.5 }}>
-          Choose players, pick a time, and send your booking. We'll confirm soon.
-        </p>
-
-        <form
-          onSubmit={handleSubmit}
-          style={{
-            background: t.cardBg,
-            border: `1px solid ${t.border}`,
-            borderRadius: 20,
-            padding: "22px 20px 20px",
-            boxShadow: t.cardShadow,
-            display: "grid",
-            gap: 28,
-          }}
-        >
-          <Section title="Your details">
-            <div className="pb-grid">
-              <div>
-                <label style={label}>First name *</label>
-                <input
-                  style={inputStyle}
-                  value={form.firstName}
-                  onChange={(e) => handleChange("firstName", e.target.value)}
-                  placeholder="Ali"
-                  autoComplete="given-name"
-                />
-              </div>
-              <div>
-                <label style={label}>Last name *</label>
-                <input
-                  style={inputStyle}
-                  value={form.lastName}
-                  onChange={(e) => handleChange("lastName", e.target.value)}
-                  placeholder="Hassan"
-                  autoComplete="family-name"
-                />
-              </div>
-            </div>
-            <div>
-              <label style={label}>Phone number *</label>
-              <input
-                style={inputStyle}
-                value={form.phone}
-                onChange={(e) => handleChange("phone", e.target.value)}
-                placeholder="+92 3xx xxxxxxx"
-                inputMode="tel"
-                autoComplete="tel"
-              />
-            </div>
-          </Section>
-
-          <Section title="Players" hint={`Slide or type a number. Maximum ${MAX_PLAYERS}.`}>
+      <main style={{ maxWidth: 1120, width: "100%", margin: "0 auto", padding: "40px 32px 64px", minWidth: 0 }}>
+        <div style={{ maxWidth: 680, width: "100%", margin: "0 auto", minWidth: 0 }}>
+          <div style={{ textAlign: "center", marginBottom: 32 }}>
             <div
               style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: 12,
-                padding: "14px 16px",
-                borderRadius: 14,
-                background: dark ? "rgba(255,255,255,0.03)" : "rgba(15,17,21,0.03)",
-                border: `1px solid ${t.border}`,
+                fontSize: 12,
+                fontWeight: 600,
+                letterSpacing: 1.6,
+                color: c.accent,
+                textTransform: "uppercase",
+                marginBottom: 12,
               }}
             >
-              <div>
-                <div style={{ fontSize: 12, color: t.textMuted }}>Selected</div>
-                <div style={{ fontSize: 28, fontWeight: 600, letterSpacing: -0.8, lineHeight: 1.1 }}>
+              Book a pitch
+            </div>
+            <h1
+              className="pb-intro-title"
+              style={{
+                margin: 0,
+                fontSize: 44,
+                fontWeight: 600,
+                letterSpacing: -1.2,
+                lineHeight: 1.15,
+                color: c.text,
+              }}
+            >
+              Reserve your game
+            </h1>
+            <p
+              style={{
+                margin: "12px auto 0",
+                maxWidth: 420,
+                color: c.secondary,
+                fontSize: 14,
+                lineHeight: 1.5,
+              }}
+            >
+              Choose your players, pick a time, and send your booking. We'll confirm soon.
+            </p>
+          </div>
+
+          <form
+            className="pb-form"
+            onSubmit={handleSubmit}
+            style={{
+              background: c.form,
+              border: `1px solid ${c.border}`,
+              borderRadius: 16,
+              padding: "28px 28px 24px",
+              display: "grid",
+              gap: 32,
+              width: "100%",
+              minWidth: 0,
+              overflow: "hidden",
+              transition: "background-color 180ms ease, border-color 180ms ease",
+            }}
+          >
+            <section>
+              <h2 style={sectionTitle}>Your details</h2>
+              <div className="pb-grid" style={{ marginTop: 16 }}>
+                <div>
+                  <label style={label}>First name *</label>
+                  <input
+                    style={inputStyle}
+                    value={form.firstName}
+                    onChange={(e) => handleChange("firstName", e.target.value)}
+                    placeholder="Ali"
+                    autoComplete="given-name"
+                  />
+                </div>
+                <div>
+                  <label style={label}>Last name *</label>
+                  <input
+                    style={inputStyle}
+                    value={form.lastName}
+                    onChange={(e) => handleChange("lastName", e.target.value)}
+                    placeholder="Hassan"
+                    autoComplete="family-name"
+                  />
+                </div>
+              </div>
+              <div style={{ marginTop: 16 }}>
+                <label style={label}>Phone number *</label>
+                <input
+                  style={inputStyle}
+                  value={form.phone}
+                  onChange={(e) => handleChange("phone", e.target.value)}
+                  placeholder="+92 3xx xxxxxxx"
+                  inputMode="tel"
+                  autoComplete="tel"
+                />
+              </div>
+            </section>
+
+            <section>
+              <h2 style={sectionTitle}>Players</h2>
+              <div style={{ marginTop: 16 }}>
+                <div style={{ fontSize: 13, color: c.muted, marginBottom: 4 }}>Selected</div>
+                <div
+                  style={{
+                    fontSize: 32,
+                    fontWeight: 600,
+                    letterSpacing: -0.8,
+                    lineHeight: 1.1,
+                    color: c.text,
+                    marginBottom: 16,
+                  }}
+                >
                   {clampPlayers(form.players)}
-                  <span style={{ fontSize: 13, fontWeight: 500, color: t.textMuted, marginLeft: 6 }}>
+                  <span style={{ fontSize: 16, fontWeight: 500, color: c.muted, marginLeft: 6 }}>
                     / {MAX_PLAYERS}
                   </span>
                 </div>
+                <input
+                  className="pb-range"
+                  type="range"
+                  min={MIN_PLAYERS}
+                  max={MAX_PLAYERS}
+                  step={1}
+                  value={clampPlayers(form.players)}
+                  onChange={(e) => applyPlayers(e.target.value)}
+                  aria-label="Players slider"
+                />
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    fontSize: 12,
+                    color: c.muted,
+                    marginTop: 8,
+                  }}
+                >
+                  <span>{MIN_PLAYERS}</span>
+                  <span>5</span>
+                  <span>{MAX_PLAYERS}</span>
+                </div>
+                <input
+                  aria-label="Type number of players"
+                  style={{
+                    ...inputStyle,
+                    width: 72,
+                    height: 44,
+                    textAlign: "center",
+                    fontSize: 16,
+                    fontWeight: 600,
+                    padding: 0,
+                    marginTop: 12,
+                  }}
+                  type="number"
+                  min={MIN_PLAYERS}
+                  max={MAX_PLAYERS}
+                  inputMode="numeric"
+                  value={playersDraft}
+                  onChange={(e) => {
+                    const raw = e.target.value;
+                    if (raw === "") {
+                      setPlayersDraft("");
+                      return;
+                    }
+                    const n = Number(raw);
+                    if (!Number.isFinite(n)) return;
+                    const next = clampPlayers(n);
+                    handleChange("players", next);
+                    setPlayersDraft(String(next));
+                  }}
+                  onBlur={() => applyPlayers(playersDraft === "" ? MIN_PLAYERS : playersDraft)}
+                />
               </div>
-              <input
-                aria-label="Type number of players"
-                style={{
-                  ...inputStyle,
-                  width: 72,
-                  textAlign: "center",
-                  fontSize: 18,
-                  fontWeight: 600,
-                  padding: "10px 8px",
-                }}
-                type="number"
-                min={MIN_PLAYERS}
-                max={MAX_PLAYERS}
-                inputMode="numeric"
-                value={playersDraft}
-                onChange={(e) => {
-                  const raw = e.target.value;
-                  if (raw === "") {
-                    setPlayersDraft("");
-                    return;
-                  }
-                  const n = Number(raw);
-                  if (!Number.isFinite(n)) return;
-                  const next = clampPlayers(n);
-                  handleChange("players", next);
-                  setPlayersDraft(String(next));
-                }}
-                onBlur={() => applyPlayers(playersDraft === "" ? MIN_PLAYERS : playersDraft)}
-              />
-            </div>
-            <input
-              className="pb-range"
-              type="range"
-              min={MIN_PLAYERS}
-              max={MAX_PLAYERS}
-              step={1}
-              value={clampPlayers(form.players)}
-              onChange={(e) => applyPlayers(e.target.value)}
-              aria-label="Players slider"
-            />
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: t.textMuted }}>
-              <span>{MIN_PLAYERS}</span>
-              <span>5</span>
-              <span>{MAX_PLAYERS}</span>
-            </div>
-          </Section>
+            </section>
 
-          <Section title="Date & time" hint="Tap an open day, then a time.">
-            {loadingSlots ? (
-              <div style={{ fontSize: 13, color: t.textMuted }}>Loading availability…</div>
-            ) : slotsError ? (
-              <div style={{ fontSize: 13, color: t.textMuted }}>{slotsError}</div>
-            ) : availableDates.length === 0 ? (
-              <div style={{ fontSize: 13, color: t.textMuted }}>
-                No set times yet — choose any date and time below.
-              </div>
-            ) : (
-              <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4 }}>
-                {availableDates.slice(0, 14).map((d) => {
-                  const active = form.date === d;
-                  return (
-                    <button
-                      key={d}
-                      type="button"
-                      onClick={() => {
-                        handleChange("date", d);
-                        handleChange("time", "");
-                      }}
-                      style={{
-                        flex: "0 0 auto",
-                        padding: "10px 14px",
-                        borderRadius: 14,
-                        border: `1px solid ${active ? t.accent : t.border}`,
-                        background: active ? t.accentGlow : "transparent",
-                        color: t.textPrimary,
-                        fontSize: 13,
-                        fontWeight: 500,
-                        cursor: "pointer",
-                        fontFamily: "inherit",
-                        textAlign: "left",
-                      }}
-                    >
-                      <div>{formatDateChip(d)}</div>
-                      <div style={{ fontSize: 11, color: t.textMuted, marginTop: 2 }}>
-                        {(slotsByDate[d] || []).length} open
+            <section>
+              <h2 style={{ ...sectionTitle, fontSize: 21, letterSpacing: -0.35 }}>Date & time</h2>
+              <p style={{ ...sectionHint, fontSize: 14, marginTop: 8 }}>
+                Tap an open day, then choose a time.
+              </p>
+
+              <div style={{ marginTop: 28 }}>
+                <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: c.text }}>
+                  Select a day
+                </h3>
+                <div style={{ marginTop: 12 }}>
+                  {loadingSlots ? (
+                    <div className="pb-dt-dates" aria-hidden="true">
+                      {Array.from({ length: 10 }).map((_, i) => (
+                        <div key={i} className="pb-skel pb-skel-date" style={{ height: 74 }} />
+                      ))}
+                    </div>
+                  ) : slotsError ? (
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: c.text }}>
+                        Couldn't load live availability.
                       </div>
-                    </button>
-                  );
-                })}
+                      <p style={{ margin: "6px 0 0", fontSize: 13, color: c.secondary, lineHeight: 1.45 }}>
+                        Please refresh the page and try again.
+                      </p>
+                    </div>
+                  ) : availableDates.length === 0 ? (
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: c.text }}>
+                        No available times
+                      </div>
+                      <p style={{ margin: "6px 0 0", fontSize: 13, color: c.muted, lineHeight: 1.45 }}>
+                        Try another day or check back later.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="pb-dt-dates">
+                      {availableDates.slice(0, 14).map((d) => {
+                        const active = form.date === d;
+                        const parts = formatDateParts(d);
+                        const openCount = (slotsByDate[d] || []).length;
+                        return (
+                          <button
+                            key={d}
+                            type="button"
+                            className="pb-date-card"
+                            aria-pressed={active}
+                            aria-label={`${parts.day} ${parts.date}, ${openCount} open`}
+                            onClick={() => {
+                              handleChange("date", d);
+                              handleChange("time", "");
+                            }}
+                            style={{
+                              border: `1px solid ${active ? c.accent : c.border}`,
+                              background: active ? c.accentSoft : dark ? "#181819" : "#FFFFFF",
+                              color: c.text,
+                            }}
+                          >
+                            <span style={{ fontSize: 12, fontWeight: 500, color: c.secondary, letterSpacing: 0.4 }}>
+                              {parts.day}
+                            </span>
+                            <span style={{ fontSize: 15, fontWeight: 600, marginTop: 2, letterSpacing: -0.2 }}>
+                              {parts.date}
+                            </span>
+                            <span
+                              style={{
+                                fontSize: 12,
+                                marginTop: 6,
+                                color: active ? c.accent : c.muted,
+                                fontWeight: 400,
+                              }}
+                            >
+                              {openCount} open
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               </div>
-            )}
 
-            {form.date && timesForDate.length > 0 && (
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                {timesForDate.map((tm) => {
-                  const active = form.time === tm;
+              {(loadingSlots || form.date) && !slotsError && (
+                <div style={{ marginTop: 32 }}>
+                  <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: c.text }}>
+                    Select a time
+                  </h3>
+                  <div style={{ marginTop: 12 }}>
+                    {loadingSlots ? (
+                      <div className="pb-dt-times" aria-hidden="true">
+                        {Array.from({ length: 10 }).map((_, i) => (
+                          <div key={i} className="pb-skel" style={{ height: 46 }} />
+                        ))}
+                      </div>
+                    ) : timesForDate.length === 0 ? (
+                      <div>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: c.text }}>
+                          No available times
+                        </div>
+                        <p style={{ margin: "6px 0 0", fontSize: 13, color: c.muted, lineHeight: 1.45 }}>
+                          Try another day or check back later.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="pb-dt-times">
+                        {timesForDate.map((tm) => {
+                          const active = form.time === tm;
+                          return (
+                            <button
+                              key={tm}
+                              type="button"
+                              className="pb-time-slot"
+                              aria-pressed={active}
+                              aria-label={`Time ${tm}${active ? ", selected" : ""}`}
+                              onClick={() => handleChange("time", tm)}
+                              style={{
+                                border: `1px solid ${active ? c.accent : c.border}`,
+                                background: active ? c.accent : dark ? "#181819" : "#FFFFFF",
+                                color: active ? "#FFFFFF" : c.text,
+                              }}
+                            >
+                              {tm}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </section>
+
+            <section>
+              <h2 style={sectionTitle}>Payment</h2>
+              <div
+                className="pb-grid"
+                style={{
+                  gap: 12,
+                  marginTop: 16,
+                }}
+              >
+                {PAYMENT_MODES.map((mode) => {
+                  const active = form.paymentMode === mode;
                   return (
                     <button
-                      key={tm}
+                      key={mode}
                       type="button"
-                      onClick={() => handleChange("time", tm)}
+                      className="pb-pay"
+                      onClick={() => handleChange("paymentMode", mode)}
                       style={{
-                        padding: "10px 14px",
-                        borderRadius: 999,
-                        border: `1px solid ${active ? t.accent : t.border}`,
-                        background: active ? t.accent : "transparent",
-                        color: active ? "#fff" : t.textPrimary,
-                        fontSize: 13,
+                        height: 48,
+                        padding: "0 12px",
+                        borderRadius: 10,
+                        border: `1px solid ${active ? c.accent : c.border}`,
+                        background: active ? c.accentSoft : "transparent",
+                        color: c.text,
                         fontWeight: 500,
                         cursor: "pointer",
                         fontFamily: "inherit",
+                        fontSize: 14,
                       }}
                     >
-                      {tm}
+                      {mode}
                     </button>
                   );
                 })}
               </div>
+            </section>
+
+            {error && (
+              <div
+                style={{
+                  padding: "12px 14px",
+                  borderRadius: 10,
+                  background: c.errorBg,
+                  border: `1px solid ${c.border}`,
+                  color: c.errorText,
+                  fontSize: 13,
+                  lineHeight: 1.45,
+                }}
+              >
+                {error}
+              </div>
             )}
 
-            <div className="pb-grid">
-              <div>
-                <label style={label}>Date * (dd/mm/yyyy)</label>
-                {availableDates.length > 0 ? (
-                  <select
-                    style={inputStyle}
-                    value={form.date}
-                    onChange={(e) => {
-                      handleChange("date", e.target.value);
-                      handleChange("time", "");
-                    }}
-                  >
-                    <option value="">Select date</option>
-                    {availableDates.map((d) => (
-                      <option key={d} value={d}>
-                        {formatDateLabel(d)}
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <input
-                    style={inputStyle}
-                    type="date"
-                    value={form.date}
-                    onChange={(e) => handleChange("date", e.target.value)}
-                  />
-                )}
-              </div>
-              <div>
-                <label style={label}>Time * (hh:mm)</label>
-                {timesForDate.length > 0 ? (
-                  <select
-                    style={inputStyle}
-                    value={form.time}
-                    onChange={(e) => handleChange("time", e.target.value)}
-                  >
-                    <option value="">Select time</option>
-                    {timesForDate.map((tm) => (
-                      <option key={tm} value={tm}>
-                        {tm}
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <input
-                    style={inputStyle}
-                    type="time"
-                    value={form.time}
-                    onChange={(e) => handleChange("time", e.target.value)}
-                  />
-                )}
-              </div>
-            </div>
-          </Section>
-
-          <Section title="Payment">
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-              {PAYMENT_MODES.map((mode) => {
-                const active = form.paymentMode === mode;
-                return (
-                  <button
-                    key={mode}
-                    type="button"
-                    onClick={() => handleChange("paymentMode", mode)}
-                    style={{
-                      padding: "14px 10px",
-                      borderRadius: 14,
-                      border: `1.5px solid ${active ? t.accent : t.border}`,
-                      background: active ? t.accentGlow : "transparent",
-                      color: t.textPrimary,
-                      fontWeight: 600,
-                      cursor: "pointer",
-                      fontFamily: "inherit",
-                      fontSize: 14,
-                    }}
-                  >
-                    {mode}
-                  </button>
-                );
-              })}
-            </div>
-          </Section>
-
-          {error && (
-            <div
+            <button
+              type="submit"
+              className="pb-submit"
+              disabled={submitting}
               style={{
-                padding: "12px 14px",
+                width: "100%",
+                height: 54,
                 borderRadius: 12,
-                background: "rgba(239,68,68,0.1)",
-                border: "1px solid rgba(239,68,68,0.3)",
-                color: dark ? "#fca5a5" : "#b91c1c",
-                fontSize: 13,
-                lineHeight: 1.45,
+                border: "none",
+                background: c.accent,
+                color: "#fff",
+                fontSize: 15,
+                fontWeight: 600,
+                cursor: submitting ? "wait" : "pointer",
+                opacity: submitting ? 0.7 : 1,
+                fontFamily: "inherit",
+                transition: "background-color 180ms ease, transform 150ms ease, opacity 180ms ease",
               }}
             >
-              {error}
-            </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={submitting}
-            style={{
-              width: "100%",
-              padding: "15px 16px",
-              borderRadius: 14,
-              border: "none",
-              background: t.accent,
-              color: "#fff",
-              fontSize: 16,
-              fontWeight: 600,
-              cursor: submitting ? "wait" : "pointer",
-              opacity: submitting ? 0.7 : 1,
-              fontFamily: "inherit",
-            }}
-          >
-            {submitting ? "Sending…" : "Submit booking"}
-          </button>
-        </form>
-
-        <p style={{ textAlign: "center", fontSize: 12, color: t.textMuted, marginTop: 22 }}>
-          Powered by {BUSINESS_NAME}
-        </p>
-      </div>
+              {submitting ? "Sending…" : "Submit booking"}
+            </button>
+          </form>
+        </div>
+      </main>
     </div>
   );
 }

@@ -27,7 +27,9 @@ import DesignSystemTest from "./pages/DesignSystemTest";
 import PartsScan from "./pages/PartsScan";
 
 function PrivateRoute({ children }) {
-  return localStorage.getItem("auth") ? children : <Navigate to="/login" />;
+  const token = localStorage.getItem("slippy_token");
+  const authed = localStorage.getItem("auth") === "true" && Boolean(token);
+  return authed ? children : <Navigate to="/login" />;
 }
 
 function AppInit({ children }) {
@@ -37,6 +39,8 @@ function AppInit({ children }) {
 
 function OwnerBotGate() {
   const { pathname } = useLocation();
+  const token = localStorage.getItem("slippy_token");
+  if (!token) return null;
   if (
     pathname === "/login" ||
     pathname === "/book" ||
