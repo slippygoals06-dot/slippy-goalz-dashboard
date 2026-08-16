@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://irepair-backend-production-2418.up.railway.app/:path*"
+      "destination": "https://slippy-goalz-backend-production.up.railway.app/:path*"
     },
     {
       "source": "/(.*)",

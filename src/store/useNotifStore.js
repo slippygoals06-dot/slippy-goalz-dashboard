@@ -20,7 +20,7 @@ export const useNotifStore = create((set, get) => ({
 
     // Browser push
     if ("Notification" in window && Notification.permission === "granted") {
-      new Notification(`Slippy Goalz — ${title}`, { body });
+      new Notification(`Slippy Goalz Arena — ${title}`, { body });
     }
 
     // Sound (subtle)

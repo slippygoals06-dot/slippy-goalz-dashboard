@@ -118,7 +118,7 @@ const NAV = [
 const DEFAULT_AI = {
   enabled: true,
   languages: "English, Urdu",
-  greeting: "Hi! Welcome to Slippy Goalz — how can I help you today?",
+  greeting: "Hi! Welcome to Slippy Goalz Arena — how can I help you today?",
   bookingBehaviour: "confirm_slots",
   escalation: true,
   knowledgeBase: true,

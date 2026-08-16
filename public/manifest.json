@@ -1,7 +1,7 @@
 ﻿{
-  "name": "Slippy Goalz Dashboard",
-  "short_name": "Slippy Goalz",
-  "description": "Slippy Goalz Shop Management",
+  "name": "Slippy Goalz Arena",
+  "short_name": "Slippy Arena",
+  "description": "Slippy Goalz Arena — pitch bookings and management",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0f0c29",

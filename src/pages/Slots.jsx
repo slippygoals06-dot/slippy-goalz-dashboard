@@ -648,7 +648,7 @@ function DayPanel({
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
             {[
-              ["Venue", "Slippy Goalz"],
+              ["Venue", "Slippy Goalz Arena"],
               ["Business hours", hours],
               ["Total slots", String(daySlots.length)],
             ].map(([label, value], i, arr) => (

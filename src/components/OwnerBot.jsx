@@ -168,7 +168,7 @@ export default function OwnerBot() {
 
             <div style={{ flex: 1, minWidth: 0 }}>
               <p style={{ margin: 0, fontWeight: 700, fontSize: 14, color: t.textPrimary, letterSpacing: "-0.01em" }}>
-                Slippy Goalz Assistant
+                Slippy Goalz Arena Assistant
               </p>
               <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2 }}>
                 <span

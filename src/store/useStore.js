@@ -157,7 +157,7 @@ export const useStore = create(devtools((set, get) => ({
           "/bookings"
         );
         if ("Notification" in window && Notification.permission === "granted") {
-          new Notification("Slippy Goalz — New Booking", {
+          new Notification("Slippy Goalz Arena — New Booking", {
             body: `${diff} new pending booking${diff > 1 ? "s" : ""}`,
           });
         }
