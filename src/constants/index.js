@@ -170,10 +170,10 @@ export const PAYMENT_COLORS = {
     shadow: "none",
   },
   Onsite: {
-    bg: "rgba(95,99,104,0.10)",
-    color: "#5F6368",
-    border: "rgba(95,99,104,0.20)",
-    dot: "#5F6368",
+    bg: "#F4F4F5",
+    color: "#52525B",
+    border: "#E4E4E7",
+    dot: "#71717A",
     shadow: "none",
   },
 };

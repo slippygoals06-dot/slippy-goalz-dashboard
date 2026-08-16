@@ -43,7 +43,7 @@ import { PaymentStatusCycler } from "../components/PaymentStatus";
 import { usePaymentStatus } from "../hooks/usePaymentStatus";
 import { completeBookingWithInvoice, updateBooking } from "../api";
 import { SERVICE_PRICES } from "../constants";
-import { fromApiRow, PAYMENT_STATUSES, PAYMENT_MODES } from "../utils/bookingFields";
+import { fromApiRow, PAYMENT_STATUSES, PAYMENT_STATUS_LABELS, PAYMENT_MODES } from "../utils/bookingFields";
 
 /** CUST-8E942B6F → #8E942B */
 function shortBookingId(id) {
@@ -350,7 +350,7 @@ function AddBookingModal({ open, onClose, onSaved }) {
                       fontFamily: "inherit",
                     }}
                   >
-                    {status}
+                    {PAYMENT_STATUS_LABELS[status] || status}
                   </button>
                 );
               })}
@@ -670,6 +670,7 @@ function BookingDrawer({
   const [savingNotes, setSavingNotes] = useState(false);
   const [priceDraft, setPriceDraft] = useState("");
   const [savingPrice, setSavingPrice] = useState(false);
+  const { changeStatus, loadingId: paymentLoadingId } = usePaymentStatus();
 
   useEffect(() => {
     setTab("details");
@@ -989,10 +990,13 @@ function BookingDrawer({
             <DrawerSection title="Payment" t={t}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 14 }}>
                 <div>
-                  <div style={{ fontSize: 13, color: t.textMuted }}>Status</div>
-                  <div style={{ fontSize: 14, fontWeight: 500, color: t.textPrimary, marginTop: 4 }}>
-                    {booking["Payment Status"] || "Unpaid"}
-                  </div>
+                  <div style={{ fontSize: 13, color: t.textMuted, marginBottom: 8 }}>Status</div>
+                  <PaymentStatusCycler
+                    status={booking["Payment Status"]}
+                    bookingId={booking["Booking ID"]}
+                    onChange={changeStatus}
+                    loading={paymentLoadingId === booking["Booking ID"]}
+                  />
                 </div>
                 {amountDisplay && (
                   <div style={{ textAlign: "right" }}>
@@ -1974,7 +1978,7 @@ export default function Bookings() {
                         <PaymentStatusCycler
                           status={b["Payment Status"]}
                           bookingId={b["Booking ID"]}
-                          onChange={(bookingId) => changeStatus(bookingId, b["Payment Status"])}
+                          onChange={changeStatus}
                           loading={loadingId === b["Booking ID"]}
                         />
                       </td>

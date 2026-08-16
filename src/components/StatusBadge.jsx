@@ -53,6 +53,13 @@ const SOFT = {
     dot: "#F59E0B",
     icon: "dot",
   },
+  Onsite: {
+    bg: "#F4F4F5",
+    color: "#52525B",
+    ring: "#E4E4E7",
+    dot: "#71717A",
+    icon: "dot",
+  },
   Available: {
     bg: "#ECFDF5",
     color: "#047857",
@@ -147,6 +154,13 @@ const DARK_SOFT = {
     dot: "#FBBF24",
     icon: "dot",
   },
+  Onsite: {
+    bg: "rgba(161,161,170,0.16)",
+    color: "#D4D4D8",
+    ring: "rgba(161,161,170,0.28)",
+    dot: "#A1A1AA",
+    icon: "dot",
+  },
   Available: {
     bg: "rgba(16,185,129,0.14)",
     color: "#34D399",
@@ -197,6 +211,7 @@ function resolveSoft(status, dark) {
   if (map[key]) return map[key];
   const lower = key.toLowerCase();
   if (lower === "unpaid") return map.Unpaid;
+  if (lower === "onsite") return map.Onsite;
   if (lower === "paid") return map.Paid;
   if (lower === "completed") return map.Completed;
   if (lower === "pending") return map.Pending;
