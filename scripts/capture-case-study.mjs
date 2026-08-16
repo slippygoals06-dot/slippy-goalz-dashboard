@@ -21,7 +21,6 @@ const PAGES = [
   { id: "04-invoices", path: "/invoices", auth: true },
   { id: "05-cash", path: "/cash", auth: true },
   { id: "06-slots", path: "/slots", auth: true },
-  { id: "07-parts-scan", path: "/parts/scan", auth: true },
   { id: "08-leads", path: "/leads", auth: true },
   { id: "09-waitlist", path: "/waitlist", auth: true },
   { id: "10-chats", path: "/chats", auth: true },

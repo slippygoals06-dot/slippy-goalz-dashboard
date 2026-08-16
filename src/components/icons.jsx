@@ -17,7 +17,6 @@ import {
   UserRound,
   CalendarClock,
   Plus,
-  ScanLine,
 } from "lucide-react";
 
 /** Single icon style for the whole app — Lucide 20 / stroke 2 */
@@ -34,7 +33,6 @@ export const NAV_ICONS = {
   "/invoices": Receipt,
   "/cash": Banknote,
   "/slots": Clock,
-  "/parts/scan": ScanLine,
   "/leads": Users,
   "/waitlist": Hourglass,
   "/chats": MessageSquare,

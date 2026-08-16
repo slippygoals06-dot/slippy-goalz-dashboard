@@ -20,11 +20,9 @@ import Security from "./pages/Security";
 import Settings from "./pages/Settings";
 import OwnerBot from "./components/OwnerBot";
 import PublicBooking from "./pages/PublicBooking";
-import PublicVerify from "./pages/PublicVerify";
 import ClientDemo from "./pages/ClientDemo";
 import CaseStudy from "./pages/CaseStudy";
 import DesignSystemTest from "./pages/DesignSystemTest";
-import PartsScan from "./pages/PartsScan";
 
 function PrivateRoute({ children }) {
   const token = localStorage.getItem("slippy_token");
@@ -46,8 +44,7 @@ function OwnerBotGate() {
     pathname === "/book" ||
     pathname === "/demo" ||
     pathname === "/case-study" ||
-    pathname === "/ds-tokens" ||
-    pathname.startsWith("/verify")
+    pathname === "/ds-tokens"
   ) {
     return null;
   }
@@ -64,7 +61,6 @@ export default function App() {
               <Routes>
                 <Route path="/login" element={<Login />} />
                 <Route path="/book" element={<PublicBooking />} />
-                <Route path="/verify/:batchNumber" element={<PublicVerify />} />
                 <Route path="/demo" element={<ClientDemo />} />
                 <Route path="/case-study" element={<CaseStudy />} />
                 <Route path="/ds-tokens" element={<DesignSystemTest />} />
@@ -80,7 +76,6 @@ export default function App() {
                             <Route path="/invoices" element={<Invoices />} />
                             <Route path="/cash" element={<CashLedger />} />
                             <Route path="/slots" element={<Slots />} />
-                            <Route path="/parts/scan" element={<PartsScan />} />
                             <Route path="/leads" element={<Leads />} />
                             <Route path="/waitlist" element={<Waitlist />} />
                             <Route path="/chats" element={<Chats />} />

@@ -193,7 +193,6 @@ export const NAV_ITEMS = [
   { path:"/invoices",    label:"Invoices" },
   { path:"/cash",        label:"Cash" },
   { path:"/slots",       label:"Slots" },
-  { path:"/parts/scan",  label:"Verify" },
   { path:"/leads",       label:"Leads" },
   { path:"/waitlist",    label:"Waitlist" },
   { path:"/chats",       label:"Chats" },

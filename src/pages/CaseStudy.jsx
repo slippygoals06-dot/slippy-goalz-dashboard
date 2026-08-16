@@ -96,20 +96,6 @@ const SECTIONS = [
     ],
   },
   {
-    id: "parts",
-    step: "07",
-    route: "/parts/scan",
-    title: "Parts Scan",
-    image: "/case-study/07-parts-scan.png",
-    summary: "QR scanning for parts received or installed.",
-    body: "Parts Scan closes the inventory loop on the bench. Staff scan a parts QR code to log received or installed events, keeping part movement tied to real repair work instead of handwritten notes.",
-    highlights: [
-      "Camera / QR scan flow for part events",
-      "Received vs installed logging",
-      "Built for fast floor use between jobs",
-    ],
-  },
-  {
     id: "leads",
     step: "08",
     route: "/leads",

@@ -1,7 +1,7 @@
 import { NAV_ITEMS } from "../../constants";
 
 export const NAV_GROUPS = [
-  { label: "Daily work", paths: ["/", "/bookings", "/invoices", "/cash", "/slots", "/parts/scan"] },
+  { label: "Daily work", paths: ["/", "/bookings", "/invoices", "/cash", "/slots"] },
   { label: "Customers", paths: ["/leads", "/waitlist", "/chats"] },
   { label: "More", paths: ["/analytics", "/audit", "/security", "/settings"] },
 ];
@@ -22,7 +22,6 @@ export function getPageTitle(pathname) {
   const item = PATH_META[pathname];
   if (item) return item.label;
   if (pathname.startsWith("/bookings")) return "Bookings";
-  if (pathname.startsWith("/parts")) return "Parts Scan";
   return "Dashboard";
 }
 

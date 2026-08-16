@@ -205,16 +205,4 @@ export const connectWhatsApp = (phoneNumberId, accessToken) =>
     }),
   });
 
-export const receiveParts = (body) =>
-  apiFetch("/parts/receive", {
-    method: "POST",
-    body: JSON.stringify(body),
-  });
-
-export const installParts = (body) =>
-  apiFetch("/parts/install", {
-    method: "POST",
-    body: JSON.stringify(body),
-  });
-
 export { API_URL };
