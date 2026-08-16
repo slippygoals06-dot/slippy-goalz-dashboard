@@ -1346,17 +1346,37 @@ export default function Bookings() {
       return matchSearch && matchFilter;
     });
 
-    // Newest first: schedule date desc, then time desc, then created_at desc
+    const todayKey = (() => {
+      const now = new Date();
+      return [
+        now.getFullYear(),
+        String(now.getMonth() + 1).padStart(2, "0"),
+        String(now.getDate()).padStart(2, "0"),
+      ].join("-");
+    })();
+
+    const closed = (status) =>
+      status === "Completed" || status === "Cancelled" || status === "Rejected";
+
+    // Closed first, then closest date, then time
     return [...list].sort((a, b) => {
+      const ca = closed(a.Status) ? 0 : 1;
+      const cb = closed(b.Status) ? 0 : 1;
+      if (ca !== cb) return ca - cb;
       const da = String(a.Date || "");
       const db = String(b.Date || "");
-      if (da !== db) return db.localeCompare(da);
+      if (da !== db) {
+        const aUpcoming = da >= todayKey;
+        const bUpcoming = db >= todayKey;
+        if (aUpcoming !== bUpcoming) return aUpcoming ? -1 : 1;
+        return aUpcoming ? da.localeCompare(db) : db.localeCompare(da);
+      }
       const ta = String(a.Time || "");
       const tb = String(b.Time || "");
-      if (ta !== tb) return tb.localeCompare(ta);
-      const ca = String(a.created_at || a["Created At"] || "");
-      const cb = String(b.created_at || b["Created At"] || "");
-      return cb.localeCompare(ca);
+      if (ta !== tb) return ta.localeCompare(tb);
+      const ida = String(a["Booking ID"] || "");
+      const idb = String(b["Booking ID"] || "");
+      return ida.localeCompare(idb);
     });
   }, [bookings, search, filter]);
 
