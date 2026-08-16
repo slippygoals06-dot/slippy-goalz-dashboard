@@ -261,7 +261,8 @@ export const useStore = create(devtools((set, get) => ({
             time: booking.time,
             notes: booking.notes,
             status: booking.status || "Confirmed",
-            source: booking.source,
+            source: booking.source || "Admin",
+            amount: booking.amount,
           });
       const saved = await apiCall("/bookings", {
         method: "POST",
@@ -280,6 +281,7 @@ export const useStore = create(devtools((set, get) => ({
         "Notes":          payload.notes || "",
         "Status":         payload.status || "Confirmed",
         "Source":         payload.source || saved?.Source || "",
+        amount:           payload.amount ?? saved?.amount ?? null,
       };
       set(state => ({ bookings: [row, ...state.bookings] }));
       return saved;

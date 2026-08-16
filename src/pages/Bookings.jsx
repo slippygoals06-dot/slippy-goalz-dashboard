@@ -91,6 +91,7 @@ const ADD_EMPTY = {
   date: "",
   time: "",
   paymentStatus: "Unpaid",
+  amount: "",
   notes: "",
 };
 
@@ -313,6 +314,18 @@ function AddBookingModal({ open, onClose, onSaved }) {
                 style={{ ...inputStyle, width: 42, padding: 0, cursor: "pointer", fontSize: 18, flexShrink: 0 }}
               >+</button>
             </div>
+          </AddField>
+          <AddField label="Price (Rs)" span={2} t={t}>
+            <input
+              style={inputStyle}
+              type="number"
+              min={0}
+              step={1}
+              inputMode="numeric"
+              value={form.amount}
+              onChange={(e) => handleChange("amount", e.target.value)}
+              placeholder="e.g. 4000"
+            />
           </AddField>
           <AddField label="Payment status" span={2} t={t}>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
@@ -644,6 +657,7 @@ function BookingDrawer({
   onReject,
   onCompleted,
   onNotesSaved,
+  onAmountSaved,
 }) {
   const { theme: t } = useTheme();
   const { showToast } = useToast();
@@ -654,11 +668,14 @@ function BookingDrawer({
   const [submitting, setSubmitting] = useState(false);
   const [notes, setNotes] = useState("");
   const [savingNotes, setSavingNotes] = useState(false);
+  const [priceDraft, setPriceDraft] = useState("");
+  const [savingPrice, setSavingPrice] = useState(false);
 
   useEffect(() => {
     setTab("details");
     setCompleteOpen(false);
     setInvoiceAmount(booking?.amount != null && booking.amount !== "" ? String(booking.amount) : "");
+    setPriceDraft(booking?.amount != null && booking.amount !== "" ? String(booking.amount) : "");
     setNotes(booking?.Notes || "");
   }, [booking?.["Booking ID"], booking?.Notes, booking?.amount]);
 
@@ -691,13 +708,32 @@ function BookingDrawer({
   if (!booking) return null;
 
   const notesDirty = (notes || "") !== (booking.Notes || "");
+  const savedPrice = booking.amount != null && booking.amount !== "" ? String(booking.amount) : "";
+  const priceDirty = (priceDraft || "") !== savedPrice;
   const canComplete = booking.Status === "Confirmed" || booking.Status === "Pending";
   const amountDisplay =
     booking.amount != null && booking.amount !== ""
       ? `Rs ${Number(booking.amount).toLocaleString()}`
-      : SERVICE_PRICES[booking.Service]
-        ? `Rs ${SERVICE_PRICES[booking.Service].toLocaleString()} est.`
-        : null;
+      : null;
+
+  async function handleSavePrice() {
+    const amount = Number(priceDraft);
+    if (priceDraft.trim() === "" || Number.isNaN(amount) || amount < 0) {
+      showToast("Enter a valid price", "error");
+      return;
+    }
+    setSavingPrice(true);
+    try {
+      await updateBooking(encodeURIComponent(booking["Booking ID"]), { amount });
+      onAmountSaved?.(booking["Booking ID"], amount);
+      showToast("Price saved");
+    } catch (err) {
+      console.error(err);
+      showToast(err.message || "Failed to save price", "error");
+    } finally {
+      setSavingPrice(false);
+    }
+  }
 
   async function handleSaveNotes() {
     setSavingNotes(true);
@@ -951,7 +987,7 @@ function BookingDrawer({
             </DrawerSection>
 
             <DrawerSection title="Payment" t={t}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 14 }}>
                 <div>
                   <div style={{ fontSize: 13, color: t.textMuted }}>Status</div>
                   <div style={{ fontSize: 14, fontWeight: 500, color: t.textPrimary, marginTop: 4 }}>
@@ -960,7 +996,7 @@ function BookingDrawer({
                 </div>
                 {amountDisplay && (
                   <div style={{ textAlign: "right" }}>
-                    <div style={{ fontSize: 13, color: t.textMuted }}>Amount</div>
+                    <div style={{ fontSize: 13, color: t.textMuted }}>Saved price</div>
                     <div
                       className="font-mono-data"
                       style={{ fontSize: 15, fontWeight: 500, color: t.textPrimary, marginTop: 4 }}
@@ -969,6 +1005,52 @@ function BookingDrawer({
                     </div>
                   </div>
                 )}
+              </div>
+              <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: t.textMuted, marginBottom: 8 }}>
+                Price (Rs)
+              </label>
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <input
+                  type="number"
+                  min={0}
+                  step={1}
+                  inputMode="numeric"
+                  value={priceDraft}
+                  onChange={(e) => setPriceDraft(e.target.value)}
+                  placeholder="Enter price"
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                    height: 42,
+                    padding: "0 12px",
+                    borderRadius: 10,
+                    background: t.inputBg,
+                    border: `1px solid ${t.border}`,
+                    fontSize: 14,
+                    color: t.textPrimary,
+                    outline: "none",
+                    fontFamily: "inherit",
+                    boxSizing: "border-box",
+                  }}
+                />
+                <button
+                  type="button"
+                  className="ui-press"
+                  disabled={!priceDirty || savingPrice}
+                  onClick={handleSavePrice}
+                  style={{
+                    ...secondaryBtnStyle(t),
+                    height: 42,
+                    padding: "0 14px",
+                    fontSize: 12,
+                    opacity: !priceDirty || savingPrice ? 0.5 : 1,
+                    cursor: !priceDirty || savingPrice ? "default" : "pointer",
+                    fontFamily: "inherit",
+                    flexShrink: 0,
+                  }}
+                >
+                  {savingPrice ? "Saving…" : "Save"}
+                </button>
               </div>
             </DrawerSection>
 
@@ -1237,6 +1319,17 @@ export default function Bookings() {
     }));
     setSelected((prev) =>
       prev && prev["Booking ID"] === bookingId ? { ...prev, Notes: notes } : prev
+    );
+  }
+
+  function handleAmountSaved(bookingId, amount) {
+    useStore.setState((state) => ({
+      bookings: state.bookings.map((b) =>
+        b["Booking ID"] === bookingId ? { ...b, amount } : b
+      ),
+    }));
+    setSelected((prev) =>
+      prev && prev["Booking ID"] === bookingId ? { ...prev, amount } : prev
     );
   }
 
@@ -1521,6 +1614,7 @@ export default function Bookings() {
         onReject={rejectBooking}
         onCompleted={handleCompleted}
         onNotesSaved={handleNotesSaved}
+        onAmountSaved={handleAmountSaved}
       />
       <AddBookingModal open={addOpen} onClose={() => setAddOpen(false)} />
       <CustomerHistory customer={customer} bookings={bookings} invoices={invoices} onClose={() => setCustomer(null)} />

@@ -67,6 +67,7 @@ export function toApiPayload({
   notes,
   status = "Confirmed",
   source,
+  amount,
 }) {
   const fullName =
     (name && String(name).trim()) ||
@@ -81,11 +82,15 @@ export function toApiPayload({
     payment_mode: mode,
     date: String(date || "").trim(),
     time: String(time || "").trim(),
-    payment_status: "Unpaid",
+    payment_status: paymentStatus || "Unpaid",
     notes: notes ? String(notes).trim() : null,
     status: "Pending",
   };
   if (source) body.source = source;
+  if (amount != null && amount !== "") {
+    const n = Number(amount);
+    if (Number.isFinite(n) && n >= 0) body.amount = n;
+  }
   return body;
 }
 
