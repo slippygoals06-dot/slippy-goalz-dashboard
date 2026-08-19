@@ -107,7 +107,7 @@ export default function PublicBooking() {
         });
         setSlots([...map.values()]);
       } catch {
-        setSlotsError("Couldn't load live times. You can choose manually below.");
+        setSlotsError("Couldn't load live times. Please try again in a moment.");
       } finally {
         setLoadingSlots(false);
       }
@@ -576,7 +576,7 @@ export default function PublicBooking() {
               <div style={{ fontSize: 13, color: t.textMuted }}>{slotsError}</div>
             ) : availableDates.length === 0 ? (
               <div style={{ fontSize: 13, color: t.textMuted }}>
-                No available times right now. Choose manually below.
+                No available times right now. Please try again later.
               </div>
             ) : (
               <div>
@@ -666,66 +666,6 @@ export default function PublicBooking() {
                 </div>
               </>
             )}
-
-            {/* Secondary manual alternative (keeps state synced with the selectors) */}
-            <div style={{ marginTop: 26, paddingTop: 18, borderTop: `1px solid ${t.borderSub}` }}>
-              <div style={{ fontSize: 13, fontWeight: 650, color: t.textSecondary, marginBottom: 10 }}>
-                Or choose manually
-              </div>
-              <div className="pb-grid">
-                <div>
-                  <label style={label}>Date</label>
-                  {availableDates.length > 0 ? (
-                    <select
-                      style={inputStyle}
-                      value={form.date}
-                      onChange={(e) => {
-                        handleChange("date", e.target.value);
-                        handleChange("time", "");
-                      }}
-                    >
-                      <option value="">Select date</option>
-                      {availableDates.map((d) => (
-                        <option key={d} value={d}>
-                          {formatDateLabel(d)}
-                        </option>
-                      ))}
-                    </select>
-                  ) : (
-                    <input
-                      style={inputStyle}
-                      type="date"
-                      value={form.date}
-                      onChange={(e) => handleChange("date", e.target.value)}
-                    />
-                  )}
-                </div>
-                <div>
-                  <label style={label}>Time</label>
-                  {timesForDate.length > 0 ? (
-                    <select
-                      style={inputStyle}
-                      value={form.time}
-                      onChange={(e) => handleChange("time", e.target.value)}
-                    >
-                      <option value="">Select time</option>
-                      {timesForDate.map((tm) => (
-                        <option key={tm} value={tm}>
-                          {tm}
-                        </option>
-                      ))}
-                    </select>
-                  ) : (
-                    <input
-                      style={inputStyle}
-                      type="time"
-                      value={form.time}
-                      onChange={(e) => handleChange("time", e.target.value)}
-                    />
-                  )}
-                </div>
-              </div>
-            </div>
           </Section>
 
           <Section title="Payment">
