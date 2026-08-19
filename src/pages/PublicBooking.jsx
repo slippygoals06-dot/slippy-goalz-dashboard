@@ -275,6 +275,15 @@ export default function PublicBooking() {
         .pb-range::-webkit-slider-thumb { -webkit-appearance:none; width:20px; height:20px; border-radius:50%; background:${t.accent}; border:3px solid ${dark?"#0a0a0b":"#fafafa"}; box-shadow:0 1px 4px rgba(0,0,0,0.2); cursor:pointer; }
         .pb-range::-moz-range-thumb { width:20px; height:20px; border-radius:50%; background:${t.accent}; border:3px solid ${dark?"#0a0a0b":"#fafafa"}; box-shadow:0 1px 4px rgba(0,0,0,0.2); cursor:pointer; }
         .pb-input:focus { border-color: ${t.accent} !important; }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+        @media (max-width: 767px) {
+          .pb-date-grid { grid-template-columns: repeat(3, 1fr) !important; }
+          .pb-time-grid { grid-template-columns: repeat(3, 1fr) !important; }
+        }
+        @media (min-width: 768px) and (max-width: 1099px) {
+          .pb-date-grid { grid-template-columns: repeat(4, 1fr) !important; }
+          .pb-time-grid { grid-template-columns: repeat(4, 1fr) !important; }
+        }
       `}</style>
 
       {/* Header */}
@@ -371,77 +380,115 @@ export default function PublicBooking() {
           </Section>
 
           {/* Date & Time */}
-          <Section title="Select a day">
-            {loadingSlots ? (
-              <div style={{ fontSize: 13, color: dark ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.4)" }}>Loading…</div>
-            ) : slotsError ? (
-              <div style={{ fontSize: 13, color: dark ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.4)" }}>{slotsError}</div>
-            ) : availableDates.length === 0 ? (
-              <div style={{ fontSize: 13, color: dark ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.4)" }}>
-                No set times — pick any date & time below.
-              </div>
-            ) : (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(100px, 1fr))", gap: 8 }}>
-                {availableDates.slice(0, 14).map((d) => {
-                  const active = form.date === d;
-                  const dt = new Date(`${d}T12:00:00`);
-                  const day = dt.getDate();
-                  const month = dt.toLocaleDateString("en-GB", { month: "short" }).toUpperCase();
-                  const weekday = dt.toLocaleDateString("en-GB", { weekday: "short" });
-                  return (
-                    <button
-                      key={d} type="button"
-                      onClick={() => { handleChange("date", d); handleChange("time", ""); }}
-                      style={{
-                        padding: "14px 8px",
-                        borderRadius: 12,
-                        border: `1px solid ${active ? t.accent : dark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)"}`,
-                        background: active ? (dark ? "rgba(244,63,94,0.12)" : "rgba(244,63,94,0.06)") : "transparent",
-                        cursor: "pointer",
-                        fontFamily: "inherit",
-                        textAlign: "center",
-                        transition: "all 150ms ease",
-                      }}
-                    >
-                      <div style={{ fontSize: 11, fontWeight: 500, color: active ? t.accent : (dark ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.4)"), marginBottom: 2 }}>
-                        {weekday}
-                      </div>
-                      <div style={{ fontSize: 18, fontWeight: 600, color: active ? t.accent : (dark ? "#fff" : "#0f1115"), letterSpacing: -0.3 }}>
-                        {day} {month}
-                      </div>
-                      <div style={{ fontSize: 11, color: active ? t.accent : (dark ? "rgba(255,255,255,0.35)" : "rgba(0,0,0,0.35)"), marginTop: 2 }}>
-                        {(slotsByDate[d] || []).length} open
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
+          <section style={{ display: "grid", gap: 8 }}>
+            <h3 style={{ margin: 0, fontSize: 20, fontWeight: 600, color: dark ? "#F4F4F5" : "#18181B", letterSpacing: -0.4 }}>
+              Date & time
+            </h3>
+            <p style={{ margin: 0, fontSize: 14, color: dark ? "#A1A1AA" : "#52525B", lineHeight: 1.5 }}>
+              Tap an open day, then choose a time.
+            </p>
 
-            {/* Time chips */}
+            {/* Select a day */}
+            <div style={{ marginTop: 24 }}>
+              <h4 style={{ margin: "0 0 12px", fontSize: 14, fontWeight: 600, color: dark ? "#F4F4F5" : "#18181B" }}>
+                Select a day
+              </h4>
+
+              {loadingSlots ? (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 10 }}>
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <div key={i} style={{
+                      height: 74, borderRadius: 10,
+                      background: dark ? "#181819" : "#F4F4F5",
+                      animation: "pulse 1.5s ease-in-out infinite",
+                    }} />
+                  ))}
+                </div>
+              ) : slotsError ? (
+                <div style={{ padding: "16px 14px", borderRadius: 10, background: dark ? "#181819" : "#fff", border: `1px solid ${dark ? "#27272A" : "#E4E4E7"}` }}>
+                  <p style={{ margin: 0, fontSize: 13, color: dark ? "#A1A1AA" : "#52525B", lineHeight: 1.5 }}>
+                    Couldn't load live availability. You can choose a date and time manually below.
+                  </p>
+                </div>
+              ) : availableDates.length === 0 ? (
+                <div style={{ padding: "20px 14px", borderRadius: 10, background: dark ? "#181819" : "#fff", border: `1px solid ${dark ? "#27272A" : "#E4E4E7"}`, textAlign: "center" }}>
+                  <p style={{ margin: "0 0 4px", fontSize: 14, fontWeight: 500, color: dark ? "#F4F4F5" : "#18181B" }}>No available times</p>
+                  <p style={{ margin: 0, fontSize: 13, color: dark ? "#71717A" : "#71717A" }}>Try another day or check back later.</p>
+                </div>
+              ) : (
+                <div className="pb-date-grid" style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 10 }}>
+                  {availableDates.slice(0, 14).map((d) => {
+                    const active = form.date === d;
+                    const dt = new Date(`${d}T12:00:00`);
+                    const weekday = dt.toLocaleDateString("en-GB", { weekday: "short" }).toUpperCase();
+                    const day = dt.getDate();
+                    const month = dt.toLocaleDateString("en-GB", { month: "short" }).toUpperCase();
+                    const openCount = (slotsByDate[d] || []).length;
+                    return (
+                      <button
+                        key={d} type="button"
+                        aria-pressed={active}
+                        onClick={() => { handleChange("date", d); handleChange("time", ""); }}
+                        style={{
+                          padding: "14px 6px",
+                          minHeight: 74,
+                          borderRadius: 10,
+                          border: `1px solid ${active ? (dark ? "#F43F5E" : "#E93656") : (dark ? "#27272A" : "#E4E4E7")}`,
+                          background: active
+                            ? (dark ? "rgba(244,63,94,0.08)" : "rgba(233,54,86,0.04)")
+                            : (dark ? "#111112" : "#fff"),
+                          cursor: "pointer",
+                          fontFamily: "inherit",
+                          textAlign: "center",
+                          transition: "border-color 150ms ease, background 150ms ease",
+                          outline: "none",
+                        }}
+                      >
+                        <div style={{ fontSize: 12, fontWeight: 500, color: active ? (dark ? "#F43F5E" : "#E93656") : (dark ? "#71717A" : "#71717A"), marginBottom: 3, letterSpacing: 0.3 }}>
+                          {weekday}
+                        </div>
+                        <div style={{ fontSize: 15, fontWeight: 600, color: active ? (dark ? "#F43F5E" : "#E93656") : (dark ? "#F4F4F5" : "#18181B"), letterSpacing: -0.2 }}>
+                          {day} {month}
+                        </div>
+                        <div style={{ fontSize: 12, color: active ? (dark ? "#F43F5E" : "#E93656") : (dark ? "#52525B" : "#A1A1AA"), marginTop: 3 }}>
+                          {openCount} open
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Select a time */}
             {form.date && timesForDate.length > 0 && (
-              <div style={{ marginTop: 8 }}>
-                <h3 style={{ margin: "0 0 10px", fontSize: 15, fontWeight: 600, color: dark ? "#fff" : "#0f1115", letterSpacing: -0.3 }}>
-                  Pick a time
-                </h3>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              <div style={{ marginTop: 28 }}>
+                <h4 style={{ margin: "0 0 12px", fontSize: 14, fontWeight: 600, color: dark ? "#F4F4F5" : "#18181B" }}>
+                  Select a time
+                </h4>
+                <div className="pb-time-grid" style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 10 }}>
                   {timesForDate.map((tm) => {
                     const active = form.time === tm;
                     return (
                       <button
                         key={tm} type="button"
+                        aria-pressed={active}
                         onClick={() => handleChange("time", tm)}
                         style={{
-                          padding: "10px 16px",
+                          padding: "12px 8px",
+                          minHeight: 46,
                           borderRadius: 8,
-                          border: `1px solid ${active ? t.accent : dark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)"}`,
-                          background: active ? t.accent : "transparent",
-                          color: active ? "#fff" : (dark ? "rgba(255,255,255,0.7)" : "rgba(0,0,0,0.7)"),
-                          fontSize: 13,
+                          border: active ? "none" : `1px solid ${dark ? "#27272A" : "#E4E4E7"}`,
+                          background: active
+                            ? (dark ? "#F43F5E" : "#E93656")
+                            : (dark ? "#111112" : "#fff"),
+                          color: active ? "#fff" : (dark ? "#F4F4F5" : "#18181B"),
+                          fontSize: 14,
                           fontWeight: 500,
                           cursor: "pointer",
                           fontFamily: "inherit",
                           transition: "all 150ms ease",
+                          outline: "none",
                         }}
                       >
                         {tm}
@@ -452,13 +499,17 @@ export default function PublicBooking() {
               </div>
             )}
 
-            {/* Fallback inputs */}
-            {(availableDates.length === 0 || slotsError) && (
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 8 }}>
+            {/* Or choose manually */}
+            <div style={{ marginTop: 28 }}>
+              <div style={{ height: 1, background: dark ? "#27272A" : "#E4E4E7", marginBottom: 24 }} />
+              <h4 style={{ margin: "0 0 12px", fontSize: 14, fontWeight: 500, color: dark ? "#71717A" : "#71717A" }}>
+                Or choose manually
+              </h4>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 <div>
                   <label style={labelStyle}>Date</label>
                   <input className="pb-input" style={inputStyle} type="date" value={form.date}
-                    onChange={(e) => handleChange("date", e.target.value)} />
+                    onChange={(e) => { handleChange("date", e.target.value); handleChange("time", ""); }} />
                 </div>
                 <div>
                   <label style={labelStyle}>Time</label>
@@ -466,8 +517,15 @@ export default function PublicBooking() {
                     onChange={(e) => handleChange("time", e.target.value)} />
                 </div>
               </div>
+            </div>
+
+            {/* Info line */}
+            {availableDates.length > 0 && !slotsError && (
+              <div style={{ marginTop: 16, fontSize: 12, color: dark ? "#52525B" : "#A1A1AA", display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ fontSize: 13 }}>ⓘ</span> Showing only available slots.
+              </div>
             )}
-          </Section>
+          </section>
 
           {/* Payment */}
           <Section title="Payment">
