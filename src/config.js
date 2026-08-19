@@ -6,5 +6,4 @@
 const RAILWAY_API = "https://slippy-goalz-backend-production.up.railway.app";
 
 export const API_URL =
-  import.meta.env.VITE_API_URL ||
-  (import.meta.env.PROD ? "/api" : RAILWAY_API);
+  import.meta.env.VITE_API_URL || RAILWAY_API;
