@@ -39,7 +39,7 @@ import { exportToCSV } from "../utils/export";
 import { formatDate, formatPhone, whatsappLink, phoneKey, getInitials } from "../utils/format";
 import { isStalePending } from "../utils/sla";
 import { getCustomerTier } from "../utils/customerTier";
-import { PaymentStatusCycler } from "../components/PaymentStatus";
+import { BookingStatusDropdown, BookingPaymentDropdown, closeAllTableDropdowns, useCloseWhenTableDropdownOpens } from "../components/BookingTableDropdown";
 import { usePaymentStatus } from "../hooks/usePaymentStatus";
 import { completeBookingWithInvoice, updateBooking } from "../api";
 import { SERVICE_PRICES } from "../constants";
@@ -470,15 +470,17 @@ function AddField({ label, children, span = 1, t }) {
   );
 }
 
-function RowActionsMenu({ booking, onView, onComplete, onInvoice, onDelete, onConfirm, onReject }) {
+function RowActionsMenu({ booking, onView, onViewCustomer, onComplete, onInvoice, onDelete, onConfirm, onReject }) {
   const { theme: t } = useTheme();
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState({ top: 0, right: 8 });
+  const [activeIndex, setActiveIndex] = useState(0);
   const btnRef = useRef(null);
   const menuRef = useRef(null);
 
   const items = [
-    { label: "View", icon: Eye, onClick: () => onView?.(booking) },
+    { label: "View booking", icon: Eye, onClick: () => onView?.(booking) },
+    { label: "View customer", icon: Users, onClick: () => onViewCustomer?.(booking) },
     booking.Status === "Pending" && {
       label: "Confirm",
       icon: Check,
@@ -500,6 +502,7 @@ function RowActionsMenu({ booking, onView, onComplete, onInvoice, onDelete, onCo
       icon: FileText,
       onClick: () => onInvoice?.(booking),
     },
+    { type: "separator" },
     {
       label: "Delete",
       icon: Trash2,
@@ -508,21 +511,26 @@ function RowActionsMenu({ booking, onView, onComplete, onInvoice, onDelete, onCo
     },
   ].filter(Boolean);
 
+  useCloseWhenTableDropdownOpens(setOpen);
+
+  const actionableCount = items.filter((i) => i.type !== "separator").length;
+
   const placeMenu = useCallback(() => {
     const btn = btnRef.current;
     if (!btn) return;
     const r = btn.getBoundingClientRect();
-    const menuH = items.length * 40 + 16;
+    const menuH = actionableCount * 42 + (items.some((i) => i.type === "separator") ? 13 : 0) + 16;
     const openUp = window.innerHeight - r.bottom < menuH + 12 && r.top > menuH;
     setPos({
       top: openUp ? Math.max(8, r.top - menuH - 8) : r.bottom + 8,
       right: Math.max(8, window.innerWidth - r.right),
     });
-  }, [items.length]);
+  }, [actionableCount, items]);
 
   useLayoutEffect(() => {
     if (!open) return;
     placeMenu();
+    setActiveIndex(0);
   }, [open, placeMenu]);
 
   useEffect(() => {
@@ -532,7 +540,10 @@ function RowActionsMenu({ booking, onView, onComplete, onInvoice, onDelete, onCo
       setOpen(false);
     }
     function onKey(e) {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key === "Escape") {
+        setOpen(false);
+        btnRef.current?.focus();
+      }
     }
     document.addEventListener("mousedown", onDoc);
     document.addEventListener("keydown", onKey);
@@ -546,6 +557,44 @@ function RowActionsMenu({ booking, onView, onComplete, onInvoice, onDelete, onCo
     };
   }, [open, placeMenu]);
 
+  function runItem(item) {
+    if (!item || item.type === "separator") return;
+    setOpen(false);
+    item.onClick?.();
+  }
+
+  function handleTriggerKeyDown(e) {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      e.stopPropagation();
+      closeAllTableDropdowns();
+      setOpen((v) => !v);
+    } else if (e.key === "ArrowDown") {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!open) {
+        closeAllTableDropdowns();
+        setOpen(true);
+      }
+    }
+  }
+
+  function handleMenuKeyDown(e) {
+    const navigable = items.filter((i) => i.type !== "separator");
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setActiveIndex((i) => Math.min(i + 1, navigable.length - 1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setActiveIndex((i) => Math.max(i - 1, 0));
+    } else if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      runItem(navigable[activeIndex]);
+    }
+  }
+
+  let navIndex = -1;
+
   return (
     <div style={{ position: "relative", display: "inline-flex" }}>
       <button
@@ -553,12 +602,15 @@ function RowActionsMenu({ booking, onView, onComplete, onInvoice, onDelete, onCo
         type="button"
         className={`bk-icon-btn${open ? " bk-icon-btn--open" : ""}`}
         title="Actions"
+        aria-label="Booking actions"
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={(e) => {
           e.stopPropagation();
+          closeAllTableDropdowns();
           setOpen((v) => !v);
         }}
+        onKeyDown={handleTriggerKeyDown}
       >
         <MoreHorizontal size={16} strokeWidth={2} />
       </button>
@@ -567,60 +619,71 @@ function RowActionsMenu({ booking, onView, onComplete, onInvoice, onDelete, onCo
           <div
             ref={menuRef}
             role="menu"
+            aria-label="Booking actions"
+            tabIndex={-1}
+            onKeyDown={handleMenuKeyDown}
             style={{
               position: "fixed",
               top: pos.top,
               right: pos.right,
-              zIndex: 4000,
-              width: 200,
-              padding: 8,
-              borderRadius: 12,
+              zIndex: 5000,
+              width: 208,
+              padding: 6,
+              borderRadius: 11,
               background: t.cardBg,
               border: `1px solid ${t.border}`,
               boxShadow: t.cardShadowHover || t.cardShadow,
               overflow: "visible",
             }}
           >
-            {items.map((item) => (
-              <button
-                key={item.label}
-                type="button"
-                role="menuitem"
-                className="ui-press"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setOpen(false);
-                  item.onClick?.();
-                }}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  width: "100%",
-                  height: 40,
-                  padding: "0 12px",
-                  borderRadius: 8,
-                  border: "none",
-                  background: "transparent",
-                  color: item.danger ? "#E11D48" : t.textPrimary,
-                  fontSize: 13,
-                  fontWeight: 500,
-                  cursor: "pointer",
-                  textAlign: "left",
-                  fontFamily: "inherit",
-                  whiteSpace: "nowrap",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = t.rowHover;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "transparent";
-                }}
-              >
-                <item.icon size={15} strokeWidth={2} />
-                {item.label}
-              </button>
-            ))}
+            {items.map((item, i) => {
+              if (item.type === "separator") {
+                return (
+                  <div
+                    key={`sep-${i}`}
+                    role="separator"
+                    style={{ height: 1, background: t.border, margin: "6px 8px" }}
+                  />
+                );
+              }
+              navIndex += 1;
+              const focused = navIndex === activeIndex;
+              return (
+                <button
+                  key={item.label}
+                  type="button"
+                  role="menuitem"
+                  className="ui-press"
+                  onMouseEnter={() => setActiveIndex(navIndex)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    runItem(item);
+                  }}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    width: "100%",
+                    height: 42,
+                    padding: "0 12px",
+                    borderRadius: 8,
+                    border: "none",
+                    background: focused ? t.rowHover : "transparent",
+                    color: item.danger ? "#E11D48" : t.textPrimary,
+                    fontSize: 13,
+                    fontWeight: 500,
+                    cursor: "pointer",
+                    textAlign: "left",
+                    fontFamily: "inherit",
+                    whiteSpace: "nowrap",
+                    transition: "background 150ms ease",
+                  }}
+                >
+                  <item.icon size={15} strokeWidth={2} />
+                  {item.label}
+                </button>
+              );
+            })}
           </div>,
           document.body
         )}
@@ -990,8 +1053,8 @@ function BookingDrawer({
             <DrawerSection title="Payment" t={t}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 14 }}>
                 <div>
-                  <div style={{ fontSize: 13, color: t.textMuted, marginBottom: 8 }}>Status</div>
-                  <PaymentStatusCycler
+                  <div style={{ fontSize: 13, color: t.textMuted, marginBottom: 8 }}>Payment</div>
+                  <BookingPaymentDropdown
                     status={booking["Payment Status"]}
                     bookingId={booking["Booking ID"]}
                     onChange={changeStatus}
@@ -1289,7 +1352,29 @@ export default function Bookings() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [focusedRow, setFocusedRow] = useState(-1);
+  const [statusLoadingId, setStatusLoadingId] = useState(null);
   const searchRef = useRef(null);
+
+  const handleStatusChange = useCallback(
+    async (bookingId, apiStatus, displayStatus) => {
+      setStatusLoadingId(bookingId);
+      try {
+        await updateBookingStatus(bookingId, apiStatus);
+        if (displayStatus === "Reschedule") {
+          showToast("Booking marked for reschedule");
+        } else {
+          showToast(`Status updated to ${displayStatus}`);
+        }
+      } catch (err) {
+        console.error(err);
+        showToast(err?.message || "Failed to update status", "error");
+        fetchAll(true, showToast);
+      } finally {
+        setStatusLoadingId(null);
+      }
+    },
+    [updateBookingStatus, showToast, fetchAll]
+  );
 
   async function confirmDeleteBooking() {
     if (!deleteTarget?.id) return;
@@ -1594,6 +1679,23 @@ export default function Bookings() {
         .bk-icon-btn:hover {
           background: ${t.rowHover};
           color: ${t.textPrimary};
+        }
+        .bk-table-dd-trigger:hover:not(:disabled) {
+          border-color: ${t.name === "dark" ? "rgba(255,255,255,0.16)" : "rgba(15,17,21,0.16)"};
+          background: ${t.name === "dark" ? "rgba(255,255,255,0.03)" : "rgba(15,17,21,0.02)"};
+        }
+        .bk-table-dd-trigger:focus-visible {
+          outline: 2px solid ${t.accent};
+          outline-offset: 2px;
+        }
+        @keyframes bkDdSpin {
+          to { transform: rotate(360deg); }
+        }
+        .bk-dd-spin {
+          animation: bkDdSpin 0.8s linear infinite;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .bk-dd-spin { animation: none; }
         }
         .bk-table tbody tr.bk-row {
           transition: background 150ms cubic-bezier(0.2, 0, 0, 1);
@@ -1955,27 +2057,16 @@ export default function Bookings() {
                         style={TD}
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <button
-                          type="button"
-                          onClick={async () => {
-                            if (b.Status === "Completed" || b.Status === "Cancelled") return;
-                            const cycle = { Pending: "Confirmed", Confirmed: "Rejected", Rejected: "Pending" };
-                            const next = cycle[b.Status] || "Pending";
-                            if (!window.confirm(`Change status to ${next}?`)) return;
-                            await updateBookingStatus(b["Booking ID"], next);
-                          }}
-                          style={{
-                            background: "none",
-                            border: "none",
-                            cursor: b.Status === "Completed" || b.Status === "Cancelled" ? "default" : "pointer",
-                            padding: 0,
-                          }}
-                        >
-                          <StatusBadge status={b.Status} pulse={b.Status === "Pending"} />
-                        </button>
+                        <BookingStatusDropdown
+                          status={b.Status}
+                          bookingId={b["Booking ID"]}
+                          disabled={b.Status === "Completed" || b.Status === "Cancelled"}
+                          loading={statusLoadingId === b["Booking ID"]}
+                          onChange={handleStatusChange}
+                        />
                       </td>
                       <td style={TD} onClick={(e) => e.stopPropagation()}>
-                        <PaymentStatusCycler
+                        <BookingPaymentDropdown
                           status={b["Payment Status"]}
                           bookingId={b["Booking ID"]}
                           onChange={changeStatus}
@@ -1987,31 +2078,10 @@ export default function Bookings() {
                         onClick={(e) => e.stopPropagation()}
                       >
                         <div style={{ display: "inline-flex", gap: 2, alignItems: "center", justifyContent: "flex-end" }}>
-                          {b.Status === "Pending" && (
-                            <>
-                              <button
-                                type="button"
-                                className="bk-icon-btn"
-                                onClick={() => confirmBooking(b["Booking ID"], b.Name)}
-                                title="Confirm"
-                                aria-label="Confirm"
-                              >
-                                <Check size={16} strokeWidth={2} />
-                              </button>
-                              <button
-                                type="button"
-                                className="bk-icon-btn"
-                                onClick={() => rejectBooking(b["Booking ID"], b.Name)}
-                                title="Reject"
-                                aria-label="Reject"
-                              >
-                                <X size={16} strokeWidth={2} />
-                              </button>
-                            </>
-                          )}
                           <RowActionsMenu
                             booking={b}
                             onView={(bk) => setSelected(bk)}
+                            onViewCustomer={(bk) => setCustomer(bk)}
                             onComplete={(bk) => setSelected(bk)}
                             onInvoice={() => navigate("/invoices")}
                             onDelete={(bk) => setDeleteTarget({ id: bk["Booking ID"], name: bk.Name })}
