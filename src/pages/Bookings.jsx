@@ -978,7 +978,7 @@ function BookingDrawer({
 
             <DrawerSection title="Attachments" t={t}>
               <BookingAttachments
-                bookingId={booking["Booking ID"] || booking.id}
+                bookingId={booking.id || booking["Booking ID"]}
                 role="owner"
                 allowVideo
               />
