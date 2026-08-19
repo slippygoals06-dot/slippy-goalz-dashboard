@@ -12,13 +12,20 @@ import {
 import { API_URL as API } from "../config";
 import { supabase } from "../lib/supabase";
 import imageCompression from "browser-image-compression";
-import { Upload, X as XIcon, Camera } from "lucide-react";
+import { Upload, X as XIcon, Loader2 } from "lucide-react";
 
 function formatDateLabel(iso) {
   if (!iso) return "";
   const [y, m, d] = String(iso).split("-");
   if (!y || !m || !d) return iso;
   return `${d}/${m}/${y}`;
+}
+
+function formatDateChip(iso) {
+  if (!iso) return "";
+  const d = new Date(`${iso}T12:00:00`);
+  if (Number.isNaN(d.getTime())) return formatDateLabel(iso);
+  return d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
 }
 
 function networkErrorMessage(err) {
@@ -29,13 +36,18 @@ function networkErrorMessage(err) {
   return msg || "Something went wrong. Please try again.";
 }
 
-function Section({ title, children }) {
+function Section({ title, hint, children }) {
   const { theme: t } = useTheme();
   return (
-    <section style={{ display: "grid", gap: 16 }}>
-      <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: t.textPrimary, letterSpacing: -0.3 }}>
-        {title}
-      </h3>
+    <section style={{ display: "grid", gap: 12 }}>
+      <div>
+        <div style={{ fontSize: 13, fontWeight: 600, color: t.textPrimary, letterSpacing: -0.2 }}>
+          {title}
+        </div>
+        {hint && (
+          <div style={{ marginTop: 4, fontSize: 12, color: t.textMuted, lineHeight: 1.4 }}>{hint}</div>
+        )}
+      </div>
       {children}
     </section>
   );
@@ -123,10 +135,27 @@ export default function PublicBooking() {
   const timesForDate = form.date ? (slotsByDate[form.date] || []).slice().sort() : [];
 
   function validate() {
-    if (!form.firstName.trim() || !form.lastName.trim()) { setError("Enter your full name."); return false; }
-    if (!form.phone.trim()) { setError("Enter your phone number."); return false; }
-    if (!form.date || !form.time) { setError("Choose a date and time."); return false; }
-    if (!form.paymentMode) { setError("Choose a payment method."); return false; }
+    if (!form.firstName.trim() || !form.lastName.trim()) {
+      setError("Please enter your first and last name.");
+      return false;
+    }
+    if (!form.phone.trim()) {
+      setError("Please enter your phone number.");
+      return false;
+    }
+    const players = clampPlayers(form.players);
+    if (!players) {
+      setError(`Please choose between ${MIN_PLAYERS} and ${MAX_PLAYERS} players.`);
+      return false;
+    }
+    if (!form.date || !form.time) {
+      setError("Please choose a booking date and time.");
+      return false;
+    }
+    if (!form.paymentMode) {
+      setError("Please choose a payment mode.");
+      return false;
+    }
     setError("");
     return true;
   }
@@ -140,13 +169,21 @@ export default function PublicBooking() {
     e.target.value = "";
     const valid = [];
     for (const f of files) {
-      if (!IMAGE_MIMES.includes(f.type)) { setError(`Unsupported: ${f.name}. Use jpg/png/webp.`); return; }
-      if (f.size > MAX_IMG_SIZE) { setError(`${f.name} exceeds 5 MB.`); return; }
+      if (!IMAGE_MIMES.includes(f.type)) {
+        setError(`Unsupported file: ${f.name}. Use jpg, png, or webp.`);
+        return;
+      }
+      if (f.size > MAX_IMG_SIZE) {
+        setError(`${f.name} is too large (max 5 MB).`);
+        return;
+      }
       valid.push(f);
     }
     setSelectedImages((prev) => {
       const next = [...prev, ...valid].slice(0, MAX_IMG_COUNT);
-      if (prev.length + valid.length > MAX_IMG_COUNT) setError(`Max ${MAX_IMG_COUNT} images.`);
+      if (prev.length + valid.length > MAX_IMG_COUNT) {
+        setError(`Maximum ${MAX_IMG_COUNT} images allowed.`);
+      }
       return next;
     });
     setError("");
@@ -159,7 +196,11 @@ export default function PublicBooking() {
   async function uploadImages(bookingId) {
     for (const rawFile of selectedImages) {
       try {
-        const compressed = await imageCompression(rawFile, { maxSizeMB: 1, maxWidthOrHeight: 1600, useWebWorker: true });
+        const compressed = await imageCompression(rawFile, {
+          maxSizeMB: 1,
+          maxWidthOrHeight: 1600,
+          useWebWorker: true,
+        });
         const ext = rawFile.name.split(".").pop()?.toLowerCase() || "jpg";
         const path = `${bookingId}/${crypto.randomUUID()}.${ext}`;
         const { error: upErr } = await supabase.storage
@@ -185,6 +226,7 @@ export default function PublicBooking() {
     if (!validate()) return;
     setSubmitting(true);
     setError("");
+
     const booking = toApiPayload({
       firstName: form.firstName,
       lastName: form.lastName,
@@ -198,6 +240,7 @@ export default function PublicBooking() {
       status: "Pending",
       source: "Public book",
     });
+
     try {
       const res = await fetch(`${API}/bookings/`, {
         method: "POST",
@@ -207,12 +250,18 @@ export default function PublicBooking() {
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         const detail = typeof err.detail === "string" ? err.detail : null;
-        if (res.status === 409) throw new Error(detail || "Slot no longer available.");
-        if (res.status === 400) throw new Error(detail || "Check your details and try again.");
+        if (res.status === 409) {
+          throw new Error(detail || "This slot is no longer available, please choose another.");
+        }
+        if (res.status === 400) {
+          throw new Error(detail || "Please check your phone number and try again.");
+        }
         throw new Error(detail || `Server returned ${res.status}`);
       }
       const result = await res.json();
-      if (selectedImages.length > 0 && result?.id) await uploadImages(result.id);
+      if (selectedImages.length > 0 && result?.id) {
+        await uploadImages(result.id);
+      }
       setDone(true);
     } catch (err) {
       setError(networkErrorMessage(err));
@@ -223,44 +272,76 @@ export default function PublicBooking() {
 
   const inputStyle = {
     width: "100%",
-    padding: "12px 14px",
-    borderRadius: 10,
-    background: dark ? "rgba(255,255,255,0.04)" : "#fff",
-    border: `1px solid ${dark ? "rgba(255,255,255,0.10)" : "rgba(0,0,0,0.10)"}`,
+    padding: "13px 15px",
+    borderRadius: 12,
+    background: dark ? "rgba(255,255,255,0.04)" : "#f8f9fe",
+    border: `1.5px solid ${t.border}`,
     color: t.textPrimary,
-    fontSize: 14,
+    fontSize: 15,
     outline: "none",
     fontFamily: "inherit",
     boxSizing: "border-box",
-    transition: "border-color 150ms ease",
   };
-  const labelStyle = {
+  const label = {
     display: "block",
-    fontSize: 13,
+    fontSize: 12.5,
     fontWeight: 500,
     color: t.textSecondary,
-    marginBottom: 6,
+    marginBottom: 8,
   };
 
   if (done) {
     return (
-      <div style={{ minHeight: "100dvh", background: dark ? "#0a0a0b" : "#fafafa", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-        <div style={{ maxWidth: 400, width: "100%", textAlign: "center" }}>
-          <div style={{
-            width: 64, height: 64, borderRadius: "50%", margin: "0 auto 24px",
-            background: "rgba(16,185,129,0.12)", display: "flex", alignItems: "center",
-            justifyContent: "center", fontSize: 28,
-          }}>
+      <div
+        style={{
+          minHeight: "100vh",
+          background: t.bg,
+          color: t.textPrimary,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: 24,
+          fontFamily: "inherit",
+        }}
+      >
+        <div
+          style={{
+            maxWidth: 440,
+            width: "100%",
+            background: t.cardBg,
+            border: `1px solid ${t.border}`,
+            borderRadius: 20,
+            padding: 36,
+            textAlign: "center",
+            boxShadow: t.cardShadow,
+          }}
+        >
+          <div
+            style={{
+              width: 56,
+              height: 56,
+              borderRadius: "50%",
+              margin: "0 auto 18px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              background: t.accentGlow,
+              color: t.accent,
+              fontSize: 24,
+              fontWeight: 600,
+            }}
+          >
             ✓
           </div>
-          <h1 style={{ fontSize: 24, fontWeight: 600, letterSpacing: -0.5, margin: "0 0 12px", color: dark ? "#fff" : "#0f1115" }}>
-            Booking submitted
-          </h1>
-          <p style={{ margin: 0, fontSize: 15, color: dark ? "rgba(255,255,255,0.6)" : "rgba(0,0,0,0.55)", lineHeight: 1.6 }}>
-            {joinName(form.firstName, form.lastName)}, your booking for{" "}
-            <strong style={{ color: dark ? "#fff" : "#0f1115" }}>{formatDateLabel(form.date)}</strong> at{" "}
-            <strong style={{ color: dark ? "#fff" : "#0f1115" }}>{form.time}</strong> ({clampPlayers(form.players)} players)
-            has been sent. We'll confirm shortly.
+          <div style={{ fontSize: 26, fontWeight: 600, marginBottom: 10, letterSpacing: -0.5 }}>
+            Booking sent
+          </div>
+          <p style={{ margin: 0, color: t.textMuted, lineHeight: 1.55, fontSize: 14 }}>
+            Thanks {joinName(form.firstName, form.lastName)}. Your booking for{" "}
+            <strong style={{ color: t.textPrimary }}>{formatDateLabel(form.date)}</strong> at{" "}
+            <strong style={{ color: t.textPrimary }}>{form.time}</strong> for{" "}
+            <strong style={{ color: t.textPrimary }}>{clampPlayers(form.players)} players</strong> is
+            with the {BUSINESS_NAME} team. We'll confirm shortly.
           </p>
         </div>
       </div>
@@ -268,106 +349,193 @@ export default function PublicBooking() {
   }
 
   return (
-    <div style={{ minHeight: "100dvh", background: dark ? "#0a0a0b" : "#fafafa", fontFamily: "inherit" }}>
+    <div
+      style={{
+        minHeight: "100vh",
+        background: t.bg,
+        color: t.textPrimary,
+        fontFamily: "inherit",
+      }}
+    >
       <style>{`
-        .pb-range { -webkit-appearance:none; appearance:none; width:100%; height:4px; border-radius:999px; outline:none;
-          background: linear-gradient(to right, ${t.accent} 0%, ${t.accent} ${((clampPlayers(form.players)-1)/(MAX_PLAYERS-1))*100}%, ${dark?"rgba(255,255,255,0.08)":"rgba(0,0,0,0.08)"} ${((clampPlayers(form.players)-1)/(MAX_PLAYERS-1))*100}%, ${dark?"rgba(255,255,255,0.08)":"rgba(0,0,0,0.08)"} 100%); }
-        .pb-range::-webkit-slider-thumb { -webkit-appearance:none; width:20px; height:20px; border-radius:50%; background:${t.accent}; border:3px solid ${dark?"#0a0a0b":"#fafafa"}; box-shadow:0 1px 4px rgba(0,0,0,0.2); cursor:pointer; }
-        .pb-range::-moz-range-thumb { width:20px; height:20px; border-radius:50%; background:${t.accent}; border:3px solid ${dark?"#0a0a0b":"#fafafa"}; box-shadow:0 1px 4px rgba(0,0,0,0.2); cursor:pointer; }
-        .pb-input:focus { border-color: ${t.accent} !important; }
-        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
-        @media (max-width: 767px) {
-          .pb-date-grid { grid-template-columns: repeat(3, 1fr) !important; }
-          .pb-time-grid { grid-template-columns: repeat(3, 1fr) !important; }
+        .pb-range {
+          -webkit-appearance: none;
+          appearance: none;
+          width: 100%;
+          height: 6px;
+          border-radius: 999px;
+          background: linear-gradient(
+            to right,
+            ${t.accent} 0%,
+            ${t.accent} ${((clampPlayers(form.players) - 1) / (MAX_PLAYERS - 1)) * 100}%,
+            ${dark ? "rgba(255,255,255,0.12)" : "rgba(15,17,21,0.12)"} ${((clampPlayers(form.players) - 1) / (MAX_PLAYERS - 1)) * 100}%,
+            ${dark ? "rgba(255,255,255,0.12)" : "rgba(15,17,21,0.12)"} 100%
+          );
+          outline: none;
         }
-        @media (min-width: 768px) and (max-width: 1099px) {
-          .pb-date-grid { grid-template-columns: repeat(4, 1fr) !important; }
-          .pb-time-grid { grid-template-columns: repeat(4, 1fr) !important; }
+        .pb-range::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          appearance: none;
+          width: 22px;
+          height: 22px;
+          border-radius: 50%;
+          background: ${t.accent};
+          border: 3px solid ${dark ? "#1a1d24" : "#fff"};
+          box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+          cursor: pointer;
+        }
+        .pb-range::-moz-range-thumb {
+          width: 22px;
+          height: 22px;
+          border-radius: 50%;
+          background: ${t.accent};
+          border: 3px solid ${dark ? "#1a1d24" : "#fff"};
+          box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+          cursor: pointer;
+        }
+        .pb-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 12px;
+        }
+        @media (max-width: 520px) {
+          .pb-grid { grid-template-columns: 1fr; }
+          .pb-date-grid { grid-template-columns: repeat(3, 1fr) !important; }
         }
       `}</style>
 
-      {/* Header */}
-      <header style={{
-        padding: "20px 24px",
-        borderBottom: `1px solid ${dark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)"}`,
-        background: dark ? "rgba(10,10,11,0.9)" : "rgba(250,250,250,0.9)",
-        backdropFilter: "blur(12px)",
-        position: "sticky", top: 0, zIndex: 10,
-      }}>
-        <div style={{ maxWidth: 520, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <div
+        style={{
+          background: t.cardBg,
+          borderBottom: `1px solid ${t.border}`,
+          padding: "18px 16px",
+        }}
+      >
+        <div style={{ maxWidth: 560, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
           <div>
-            <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: 1.2, textTransform: "uppercase", color: t.accent }}>
+            <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 1.4, color: t.accent, textTransform: "uppercase" }}>
               {BUSINESS_NAME}
-            </span>
-            <h1 style={{ margin: "2px 0 0", fontSize: 20, fontWeight: 600, letterSpacing: -0.4, color: dark ? "#fff" : "#0f1115" }}>
+            </div>
+            <h1 style={{ margin: "4px 0 0", fontSize: 22, fontWeight: 600, letterSpacing: -0.5 }}>
               Book a pitch
             </h1>
           </div>
           <button
-            type="button" onClick={toggle} aria-label="Toggle theme"
+            type="button"
+            onClick={toggle}
+            aria-label="Toggle theme"
             style={{
-              width: 36, height: 36, borderRadius: 10,
-              border: `1px solid ${dark ? "rgba(255,255,255,0.10)" : "rgba(0,0,0,0.10)"}`,
-              background: "transparent", cursor: "pointer", fontSize: 14,
-              color: dark ? "rgba(255,255,255,0.6)" : "rgba(0,0,0,0.5)",
-              display: "flex", alignItems: "center", justifyContent: "center",
+              border: `1px solid ${t.border}`,
+              background: t.bg,
+              color: t.textSecondary,
+              borderRadius: 10,
+              padding: "8px 12px",
+              cursor: "pointer",
+              fontSize: 12,
+              fontFamily: "inherit",
             }}
           >
-            {dark ? "☀" : "☾"}
+            {dark ? "Light" : "Dark"}
           </button>
         </div>
-      </header>
+      </div>
 
-      <main style={{ maxWidth: 520, margin: "0 auto", padding: "32px 20px 64px" }}>
-        <form onSubmit={handleSubmit} style={{ display: "grid", gap: 36 }}>
+      <div style={{ maxWidth: 560, margin: "0 auto", padding: "20px 16px 48px" }}>
+        <p style={{ margin: "0 0 20px", color: t.textMuted, fontSize: 14, lineHeight: 1.5 }}>
+          Choose players, pick a time, and send your booking. We'll confirm soon.
+        </p>
 
-          {/* Details */}
+        <form
+          onSubmit={handleSubmit}
+          style={{
+            background: t.cardBg,
+            border: `1px solid ${t.border}`,
+            borderRadius: 20,
+            padding: "22px 20px 20px",
+            boxShadow: t.cardShadow,
+            display: "grid",
+            gap: 28,
+          }}
+        >
           <Section title="Your details">
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <div className="pb-grid">
               <div>
-                <label style={labelStyle}>First name</label>
-                <input className="pb-input" style={inputStyle} value={form.firstName}
+                <label style={label}>First name *</label>
+                <input
+                  style={inputStyle}
+                  value={form.firstName}
                   onChange={(e) => handleChange("firstName", e.target.value)}
-                  placeholder="Ali" autoComplete="given-name" />
+                  placeholder="Ali"
+                  autoComplete="given-name"
+                />
               </div>
               <div>
-                <label style={labelStyle}>Last name</label>
-                <input className="pb-input" style={inputStyle} value={form.lastName}
+                <label style={label}>Last name *</label>
+                <input
+                  style={inputStyle}
+                  value={form.lastName}
                   onChange={(e) => handleChange("lastName", e.target.value)}
-                  placeholder="Hassan" autoComplete="family-name" />
+                  placeholder="Hassan"
+                  autoComplete="family-name"
+                />
               </div>
             </div>
             <div>
-              <label style={labelStyle}>Phone number</label>
-              <input className="pb-input" style={inputStyle} value={form.phone}
+              <label style={label}>Phone number *</label>
+              <input
+                style={inputStyle}
+                value={form.phone}
                 onChange={(e) => handleChange("phone", e.target.value)}
-                placeholder="+92 3xx xxxxxxx" inputMode="tel" autoComplete="tel" />
+                placeholder="+92 3xx xxxxxxx"
+                inputMode="tel"
+                autoComplete="tel"
+              />
             </div>
           </Section>
 
-          {/* Players */}
-          <Section title="Players">
-            <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-              <div style={{ flex: 1 }}>
-                <input
-                  className="pb-range"
-                  type="range" min={MIN_PLAYERS} max={MAX_PLAYERS} step={1}
-                  value={clampPlayers(form.players)}
-                  onChange={(e) => applyPlayers(e.target.value)}
-                />
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: dark ? "rgba(255,255,255,0.35)" : "rgba(0,0,0,0.35)", marginTop: 6 }}>
-                  <span>{MIN_PLAYERS}</span>
-                  <span>{MAX_PLAYERS}</span>
+          <Section title="Players" hint={`Slide or type a number. Maximum ${MAX_PLAYERS}.`}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 12,
+                padding: "14px 16px",
+                borderRadius: 14,
+                background: dark ? "rgba(255,255,255,0.03)" : "rgba(15,17,21,0.03)",
+                border: `1px solid ${t.border}`,
+              }}
+            >
+              <div>
+                <div style={{ fontSize: 12, color: t.textMuted }}>Selected</div>
+                <div style={{ fontSize: 28, fontWeight: 600, letterSpacing: -0.8, lineHeight: 1.1 }}>
+                  {clampPlayers(form.players)}
+                  <span style={{ fontSize: 13, fontWeight: 500, color: t.textMuted, marginLeft: 6 }}>
+                    / {MAX_PLAYERS}
+                  </span>
                 </div>
               </div>
               <input
-                className="pb-input"
-                style={{ ...inputStyle, width: 56, textAlign: "center", fontSize: 16, fontWeight: 600, padding: "10px 8px" }}
-                type="number" min={MIN_PLAYERS} max={MAX_PLAYERS} inputMode="numeric"
+                aria-label="Type number of players"
+                style={{
+                  ...inputStyle,
+                  width: 72,
+                  textAlign: "center",
+                  fontSize: 18,
+                  fontWeight: 600,
+                  padding: "10px 8px",
+                }}
+                type="number"
+                min={MIN_PLAYERS}
+                max={MAX_PLAYERS}
+                inputMode="numeric"
                 value={playersDraft}
                 onChange={(e) => {
                   const raw = e.target.value;
-                  if (raw === "") { setPlayersDraft(""); return; }
+                  if (raw === "") {
+                    setPlayersDraft("");
+                    return;
+                  }
                   const n = Number(raw);
                   if (!Number.isFinite(n)) return;
                   const next = clampPlayers(n);
@@ -377,176 +545,178 @@ export default function PublicBooking() {
                 onBlur={() => applyPlayers(playersDraft === "" ? MIN_PLAYERS : playersDraft)}
               />
             </div>
+            <input
+              className="pb-range"
+              type="range"
+              min={MIN_PLAYERS}
+              max={MAX_PLAYERS}
+              step={1}
+              value={clampPlayers(form.players)}
+              onChange={(e) => applyPlayers(e.target.value)}
+              aria-label="Players slider"
+            />
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: t.textMuted }}>
+              <span>{MIN_PLAYERS}</span>
+              <span>5</span>
+              <span>{MAX_PLAYERS}</span>
+            </div>
           </Section>
 
-          {/* Date & Time */}
-          <section style={{ display: "grid", gap: 8 }}>
-            <h3 style={{ margin: 0, fontSize: 20, fontWeight: 600, color: dark ? "#F4F4F5" : "#18181B", letterSpacing: -0.4 }}>
-              Date & time
-            </h3>
-            <p style={{ margin: 0, fontSize: 14, color: dark ? "#A1A1AA" : "#52525B", lineHeight: 1.5 }}>
-              Tap an open day, then choose a time.
-            </p>
+          <Section title="Date & time" hint="Tap an open day, then a time.">
+            {loadingSlots ? (
+              <div style={{ fontSize: 13, color: t.textMuted }}>Loading availability…</div>
+            ) : slotsError ? (
+              <div style={{ fontSize: 13, color: t.textMuted }}>{slotsError}</div>
+            ) : availableDates.length === 0 ? (
+              <div style={{ fontSize: 13, color: t.textMuted }}>
+                No set times yet — choose any date and time below.
+              </div>
+            ) : (
+              <div className="pb-date-grid" style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 10 }}>
+                {availableDates.slice(0, 14).map((d) => {
+                  const active = form.date === d;
+                  const dt = new Date(`${d}T12:00:00`);
+                  const weekday = dt.toLocaleDateString("en-GB", { weekday: "short" }).toUpperCase();
+                  const day = dt.getDate();
+                  const month = dt.toLocaleDateString("en-GB", { month: "short" }).toUpperCase();
+                  const openCount = (slotsByDate[d] || []).length;
+                  return (
+                    <button
+                      key={d}
+                      type="button"
+                      onClick={() => {
+                        handleChange("date", d);
+                        handleChange("time", "");
+                      }}
+                      style={{
+                        padding: "12px 6px",
+                        minHeight: 72,
+                        borderRadius: 12,
+                        border: `1px solid ${active ? t.accent : t.border}`,
+                        background: active ? t.accentGlow : (dark ? "rgba(255,255,255,0.02)" : "#fff"),
+                        cursor: "pointer",
+                        fontFamily: "inherit",
+                        textAlign: "center",
+                        transition: "border-color 150ms ease, background 150ms ease",
+                      }}
+                    >
+                      <div style={{ fontSize: 11, fontWeight: 500, color: active ? t.accent : t.textMuted, marginBottom: 2, letterSpacing: 0.3 }}>
+                        {weekday}
+                      </div>
+                      <div style={{ fontSize: 15, fontWeight: 600, color: active ? t.accent : t.textPrimary, letterSpacing: -0.2 }}>
+                        {day} {month}
+                      </div>
+                      <div style={{ fontSize: 11, color: active ? t.accent : t.textMuted, marginTop: 3 }}>
+                        {openCount} open
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
 
-            {/* Select a day */}
-            <div style={{ marginTop: 24 }}>
-              <h4 style={{ margin: "0 0 12px", fontSize: 14, fontWeight: 600, color: dark ? "#F4F4F5" : "#18181B" }}>
-                Select a day
-              </h4>
-
-              {loadingSlots ? (
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 10 }}>
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <div key={i} style={{
-                      height: 74, borderRadius: 10,
-                      background: dark ? "#181819" : "#F4F4F5",
-                      animation: "pulse 1.5s ease-in-out infinite",
-                    }} />
-                  ))}
-                </div>
-              ) : slotsError ? (
-                <div style={{ padding: "16px 14px", borderRadius: 10, background: dark ? "#181819" : "#fff", border: `1px solid ${dark ? "#27272A" : "#E4E4E7"}` }}>
-                  <p style={{ margin: 0, fontSize: 13, color: dark ? "#A1A1AA" : "#52525B", lineHeight: 1.5 }}>
-                    Couldn't load live availability. You can choose a date and time manually below.
-                  </p>
-                </div>
-              ) : availableDates.length === 0 ? (
-                <div style={{ padding: "20px 14px", borderRadius: 10, background: dark ? "#181819" : "#fff", border: `1px solid ${dark ? "#27272A" : "#E4E4E7"}`, textAlign: "center" }}>
-                  <p style={{ margin: "0 0 4px", fontSize: 14, fontWeight: 500, color: dark ? "#F4F4F5" : "#18181B" }}>No available times</p>
-                  <p style={{ margin: 0, fontSize: 13, color: dark ? "#71717A" : "#71717A" }}>Try another day or check back later.</p>
-                </div>
-              ) : (
-                <div className="pb-date-grid" style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 10 }}>
-                  {availableDates.slice(0, 14).map((d) => {
-                    const active = form.date === d;
-                    const dt = new Date(`${d}T12:00:00`);
-                    const weekday = dt.toLocaleDateString("en-GB", { weekday: "short" }).toUpperCase();
-                    const day = dt.getDate();
-                    const month = dt.toLocaleDateString("en-GB", { month: "short" }).toUpperCase();
-                    const openCount = (slotsByDate[d] || []).length;
-                    return (
-                      <button
-                        key={d} type="button"
-                        aria-pressed={active}
-                        onClick={() => { handleChange("date", d); handleChange("time", ""); }}
-                        style={{
-                          padding: "14px 6px",
-                          minHeight: 74,
-                          borderRadius: 10,
-                          border: `1px solid ${active ? (dark ? "#F43F5E" : "#E93656") : (dark ? "#27272A" : "#E4E4E7")}`,
-                          background: active
-                            ? (dark ? "rgba(244,63,94,0.08)" : "rgba(233,54,86,0.04)")
-                            : (dark ? "#111112" : "#fff"),
-                          cursor: "pointer",
-                          fontFamily: "inherit",
-                          textAlign: "center",
-                          transition: "border-color 150ms ease, background 150ms ease",
-                          outline: "none",
-                        }}
-                      >
-                        <div style={{ fontSize: 12, fontWeight: 500, color: active ? (dark ? "#F43F5E" : "#E93656") : (dark ? "#71717A" : "#71717A"), marginBottom: 3, letterSpacing: 0.3 }}>
-                          {weekday}
-                        </div>
-                        <div style={{ fontSize: 15, fontWeight: 600, color: active ? (dark ? "#F43F5E" : "#E93656") : (dark ? "#F4F4F5" : "#18181B"), letterSpacing: -0.2 }}>
-                          {day} {month}
-                        </div>
-                        <div style={{ fontSize: 12, color: active ? (dark ? "#F43F5E" : "#E93656") : (dark ? "#52525B" : "#A1A1AA"), marginTop: 3 }}>
-                          {openCount} open
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* Select a time */}
             {form.date && timesForDate.length > 0 && (
-              <div style={{ marginTop: 28 }}>
-                <h4 style={{ margin: "0 0 12px", fontSize: 14, fontWeight: 600, color: dark ? "#F4F4F5" : "#18181B" }}>
-                  Select a time
-                </h4>
-                <div className="pb-time-grid" style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 10 }}>
-                  {timesForDate.map((tm) => {
-                    const active = form.time === tm;
-                    return (
-                      <button
-                        key={tm} type="button"
-                        aria-pressed={active}
-                        onClick={() => handleChange("time", tm)}
-                        style={{
-                          padding: "12px 8px",
-                          minHeight: 46,
-                          borderRadius: 8,
-                          border: active ? "none" : `1px solid ${dark ? "#27272A" : "#E4E4E7"}`,
-                          background: active
-                            ? (dark ? "#F43F5E" : "#E93656")
-                            : (dark ? "#111112" : "#fff"),
-                          color: active ? "#fff" : (dark ? "#F4F4F5" : "#18181B"),
-                          fontSize: 14,
-                          fontWeight: 500,
-                          cursor: "pointer",
-                          fontFamily: "inherit",
-                          transition: "all 150ms ease",
-                          outline: "none",
-                        }}
-                      >
-                        {tm}
-                      </button>
-                    );
-                  })}
-                </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {timesForDate.map((tm) => {
+                  const active = form.time === tm;
+                  return (
+                    <button
+                      key={tm}
+                      type="button"
+                      onClick={() => handleChange("time", tm)}
+                      style={{
+                        padding: "10px 14px",
+                        borderRadius: 999,
+                        border: `1px solid ${active ? t.accent : t.border}`,
+                        background: active ? t.accent : "transparent",
+                        color: active ? "#fff" : t.textPrimary,
+                        fontSize: 13,
+                        fontWeight: 500,
+                        cursor: "pointer",
+                        fontFamily: "inherit",
+                      }}
+                    >
+                      {tm}
+                    </button>
+                  );
+                })}
               </div>
             )}
 
-            {/* Or choose manually */}
-            <div style={{ marginTop: 28 }}>
-              <div style={{ height: 1, background: dark ? "#27272A" : "#E4E4E7", marginBottom: 24 }} />
-              <h4 style={{ margin: "0 0 12px", fontSize: 14, fontWeight: 500, color: dark ? "#71717A" : "#71717A" }}>
-                Or choose manually
-              </h4>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                <div>
-                  <label style={labelStyle}>Date</label>
-                  <input className="pb-input" style={inputStyle} type="date" value={form.date}
-                    onChange={(e) => { handleChange("date", e.target.value); handleChange("time", ""); }} />
-                </div>
-                <div>
-                  <label style={labelStyle}>Time</label>
-                  <input className="pb-input" style={inputStyle} type="time" value={form.time}
-                    onChange={(e) => handleChange("time", e.target.value)} />
-                </div>
+            <div className="pb-grid">
+              <div>
+                <label style={label}>Date * (dd/mm/yyyy)</label>
+                {availableDates.length > 0 ? (
+                  <select
+                    style={inputStyle}
+                    value={form.date}
+                    onChange={(e) => {
+                      handleChange("date", e.target.value);
+                      handleChange("time", "");
+                    }}
+                  >
+                    <option value="">Select date</option>
+                    {availableDates.map((d) => (
+                      <option key={d} value={d}>
+                        {formatDateLabel(d)}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    style={inputStyle}
+                    type="date"
+                    value={form.date}
+                    onChange={(e) => handleChange("date", e.target.value)}
+                  />
+                )}
+              </div>
+              <div>
+                <label style={label}>Time * (hh:mm)</label>
+                {timesForDate.length > 0 ? (
+                  <select
+                    style={inputStyle}
+                    value={form.time}
+                    onChange={(e) => handleChange("time", e.target.value)}
+                  >
+                    <option value="">Select time</option>
+                    {timesForDate.map((tm) => (
+                      <option key={tm} value={tm}>
+                        {tm}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    style={inputStyle}
+                    type="time"
+                    value={form.time}
+                    onChange={(e) => handleChange("time", e.target.value)}
+                  />
+                )}
               </div>
             </div>
+          </Section>
 
-            {/* Info line */}
-            {availableDates.length > 0 && !slotsError && (
-              <div style={{ marginTop: 16, fontSize: 12, color: dark ? "#52525B" : "#A1A1AA", display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={{ fontSize: 13 }}>ⓘ</span> Showing only available slots.
-              </div>
-            )}
-          </section>
-
-          {/* Payment */}
           <Section title="Payment">
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
               {PAYMENT_MODES.map((mode) => {
                 const active = form.paymentMode === mode;
                 return (
                   <button
-                    key={mode} type="button"
+                    key={mode}
+                    type="button"
                     onClick={() => handleChange("paymentMode", mode)}
                     style={{
-                      padding: "14px 12px",
-                      borderRadius: 10,
-                      border: `1px solid ${active ? t.accent : dark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)"}`,
-                      background: active ? (dark ? "rgba(244,63,94,0.12)" : "rgba(244,63,94,0.06)") : "transparent",
-                      color: active ? t.accent : (dark ? "rgba(255,255,255,0.7)" : "rgba(0,0,0,0.7)"),
+                      padding: "14px 10px",
+                      borderRadius: 14,
+                      border: `1.5px solid ${active ? t.accent : t.border}`,
+                      background: active ? t.accentGlow : "transparent",
+                      color: t.textPrimary,
                       fontWeight: 600,
                       cursor: "pointer",
                       fontFamily: "inherit",
                       fontSize: 14,
-                      transition: "all 150ms ease",
                     }}
                   >
                     {mode}
@@ -556,72 +726,127 @@ export default function PublicBooking() {
             </div>
           </Section>
 
-          {/* Photos */}
-          <Section title="Photos">
-            <input ref={imgInputRef} type="file" hidden accept=".jpg,.jpeg,.png,.webp" multiple onChange={handleImageSelect} />
+          <Section title="Photos" hint={`Optional — attach up to ${MAX_IMG_COUNT} images (jpg/png/webp, max 5 MB each).`}>
+            <input
+              ref={imgInputRef}
+              type="file"
+              hidden
+              accept=".jpg,.jpeg,.png,.webp"
+              multiple
+              onChange={handleImageSelect}
+            />
             {selectedImages.length > 0 && (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 10 }}>
                 {selectedImages.map((file, i) => (
-                  <div key={i} style={{ position: "relative", aspectRatio: "1", borderRadius: 8, overflow: "hidden", border: `1px solid ${dark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)"}` }}>
-                    <img src={URL.createObjectURL(file)} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-                    <button type="button" onClick={() => removeImage(i)}
-                      style={{ position: "absolute", top: 4, right: 4, width: 22, height: 22, borderRadius: "50%", border: "none", background: "rgba(0,0,0,0.6)", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }}>
-                      <XIcon size={12} />
+                  <div
+                    key={i}
+                    style={{
+                      position: "relative",
+                      aspectRatio: "1",
+                      borderRadius: 10,
+                      overflow: "hidden",
+                      border: `1px solid ${t.border}`,
+                      background: dark ? "rgba(255,255,255,0.04)" : "rgba(15,17,21,0.04)",
+                    }}
+                  >
+                    <img
+                      src={URL.createObjectURL(file)}
+                      alt=""
+                      style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeImage(i)}
+                      style={{
+                        position: "absolute",
+                        top: 4,
+                        right: 4,
+                        width: 24,
+                        height: 24,
+                        borderRadius: "50%",
+                        border: "none",
+                        background: "rgba(0,0,0,0.55)",
+                        color: "#fff",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        padding: 0,
+                      }}
+                    >
+                      <XIcon size={14} />
                     </button>
                   </div>
                 ))}
               </div>
             )}
             {selectedImages.length < MAX_IMG_COUNT && (
-              <button type="button" onClick={() => imgInputRef.current?.click()}
+              <button
+                type="button"
+                onClick={() => imgInputRef.current?.click()}
                 style={{
-                  width: "100%", padding: "16px",
-                  borderRadius: 10,
-                  border: `1px dashed ${dark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.12)"}`,
+                  width: "100%",
+                  padding: "14px",
+                  borderRadius: 12,
+                  border: `1.5px dashed ${t.border}`,
                   background: "transparent",
-                  color: dark ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.4)",
-                  fontSize: 13, cursor: "pointer", fontFamily: "inherit",
-                  display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-                  transition: "border-color 150ms ease",
-                }}>
-                <Camera size={16} strokeWidth={1.5} />
-                Add photos (optional)
+                  color: t.textSecondary,
+                  fontSize: 13,
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
+                }}
+              >
+                <Upload size={16} strokeWidth={1.75} />
+                Add photos
               </button>
             )}
           </Section>
 
-          {/* Error */}
           {error && (
-            <div style={{
-              padding: "12px 14px", borderRadius: 10,
-              background: dark ? "rgba(239,68,68,0.08)" : "rgba(239,68,68,0.06)",
-              border: `1px solid ${dark ? "rgba(239,68,68,0.25)" : "rgba(239,68,68,0.2)"}`,
-              color: dark ? "#fca5a5" : "#dc2626",
-              fontSize: 13, lineHeight: 1.5,
-            }}>
+            <div
+              style={{
+                padding: "12px 14px",
+                borderRadius: 12,
+                background: "rgba(239,68,68,0.1)",
+                border: "1px solid rgba(239,68,68,0.3)",
+                color: dark ? "#fca5a5" : "#b91c1c",
+                fontSize: 13,
+                lineHeight: 1.45,
+              }}
+            >
               {error}
             </div>
           )}
 
-          {/* Submit */}
           <button
-            type="submit" disabled={submitting}
+            type="submit"
+            disabled={submitting}
             style={{
-              width: "100%", padding: "16px",
-              borderRadius: 12, border: "none",
-              background: t.accent, color: "#fff",
-              fontSize: 15, fontWeight: 600,
+              width: "100%",
+              padding: "15px 16px",
+              borderRadius: 14,
+              border: "none",
+              background: t.accent,
+              color: "#fff",
+              fontSize: 16,
+              fontWeight: 600,
               cursor: submitting ? "wait" : "pointer",
               opacity: submitting ? 0.7 : 1,
               fontFamily: "inherit",
-              transition: "opacity 150ms ease",
-              boxShadow: `0 1px 2px rgba(0,0,0,0.08), 0 4px 12px ${dark ? "rgba(244,63,94,0.2)" : "rgba(244,63,94,0.15)"}`,
             }}
           >
-            {submitting ? "Submitting…" : "Submit booking"}
+            {submitting ? "Sending…" : "Submit booking"}
           </button>
         </form>
-      </main>
+
+        <p style={{ textAlign: "center", fontSize: 12, color: t.textMuted, marginTop: 22 }}>
+          Powered by {BUSINESS_NAME}
+        </p>
+      </div>
     </div>
   );
 }
