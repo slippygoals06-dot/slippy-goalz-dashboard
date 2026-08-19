@@ -107,7 +107,7 @@ export default function PublicBooking() {
         });
         setSlots([...map.values()]);
       } catch {
-        setSlotsError("Couldn't load live times. Please try again in a moment.");
+        setSlotsError("Couldn't load live times. You can choose manually below.");
       } finally {
         setLoadingSlots(false);
       }
@@ -272,7 +272,9 @@ export default function PublicBooking() {
 
   const inputStyle = {
     width: "100%",
-    padding: "13px 15px",
+    padding: "0 14px",
+    height: 52,
+    minHeight: 52,
     borderRadius: 12,
     background: dark ? "rgba(255,255,255,0.04)" : "#f8f9fe",
     border: `1.5px solid ${t.border}`,
@@ -364,13 +366,8 @@ export default function PublicBooking() {
           width: 100%;
           height: 6px;
           border-radius: 999px;
-          background: linear-gradient(
-            to right,
-            ${t.accent} 0%,
-            ${t.accent} ${((clampPlayers(form.players) - 1) / (MAX_PLAYERS - 1)) * 100}%,
-            ${dark ? "rgba(255,255,255,0.12)" : "rgba(15,17,21,0.12)"} ${((clampPlayers(form.players) - 1) / (MAX_PLAYERS - 1)) * 100}%,
-            ${dark ? "rgba(255,255,255,0.12)" : "rgba(15,17,21,0.12)"} 100%
-          );
+          /* No gradients — keep slider calm */
+          background: ${dark ? "rgba(255,255,255,0.10)" : "rgba(15,17,21,0.08)"};
           outline: none;
         }
         .pb-range::-webkit-slider-thumb {
@@ -381,7 +378,7 @@ export default function PublicBooking() {
           border-radius: 50%;
           background: ${t.accent};
           border: 3px solid ${dark ? "#1a1d24" : "#fff"};
-          box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+          box-shadow: none;
           cursor: pointer;
         }
         .pb-range::-moz-range-thumb {
@@ -390,7 +387,7 @@ export default function PublicBooking() {
           border-radius: 50%;
           background: ${t.accent};
           border: 3px solid ${dark ? "#1a1d24" : "#fff"};
-          box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+          box-shadow: none;
           cursor: pointer;
         }
         .pb-grid {
@@ -398,9 +395,14 @@ export default function PublicBooking() {
           grid-template-columns: 1fr 1fr;
           gap: 12px;
         }
-        @media (max-width: 520px) {
+        @media (max-width: 767px) {
           .pb-grid { grid-template-columns: 1fr; }
           .pb-date-grid { grid-template-columns: repeat(3, 1fr) !important; }
+          .pb-time-grid { grid-template-columns: repeat(3, 1fr) !important; }
+        }
+        @media (min-width: 768px) and (max-width: 1099px) {
+          .pb-date-grid { grid-template-columns: repeat(4, 1fr) !important; }
+          .pb-time-grid { grid-template-columns: repeat(4, 1fr) !important; }
         }
       `}</style>
 
@@ -408,17 +410,14 @@ export default function PublicBooking() {
         style={{
           background: t.cardBg,
           borderBottom: `1px solid ${t.border}`,
-          padding: "18px 16px",
+          padding: "20px 16px",
         }}
       >
-        <div style={{ maxWidth: 560, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+        <div style={{ maxWidth: 820, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
           <div>
             <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 1.4, color: t.accent, textTransform: "uppercase" }}>
               {BUSINESS_NAME}
             </div>
-            <h1 style={{ margin: "4px 0 0", fontSize: 22, fontWeight: 600, letterSpacing: -0.5 }}>
-              Book a pitch
-            </h1>
           </div>
           <button
             type="button"
@@ -440,19 +439,27 @@ export default function PublicBooking() {
         </div>
       </div>
 
-      <div style={{ maxWidth: 560, margin: "0 auto", padding: "20px 16px 48px" }}>
-        <p style={{ margin: "0 0 20px", color: t.textMuted, fontSize: 14, lineHeight: 1.5 }}>
-          Choose players, pick a time, and send your booking. We'll confirm soon.
-        </p>
+      <div style={{ maxWidth: 820, margin: "0 auto", padding: "24px 16px 48px" }}>
+        <div style={{ marginBottom: 18 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.6, textTransform: "uppercase", color: t.accent }}>
+            BOOK A PITCH
+          </div>
+          <div style={{ marginTop: 6, fontSize: 38, fontWeight: 650, letterSpacing: -0.9, lineHeight: 1.05 }}>
+            Book a pitch
+          </div>
+          <p style={{ margin: "10px 0 0", color: t.textMuted, fontSize: 14.5, lineHeight: 1.5, maxWidth: 520 }}>
+            Choose your players, pick a time, and send your booking. We'll confirm soon.
+          </p>
+        </div>
 
         <form
           onSubmit={handleSubmit}
           style={{
             background: t.cardBg,
             border: `1px solid ${t.border}`,
-            borderRadius: 20,
-            padding: "22px 20px 20px",
-            boxShadow: t.cardShadow,
+            borderRadius: 16,
+            padding: "28px 22px 22px",
+            boxShadow: "none",
             display: "grid",
             gap: 28,
           }}
@@ -562,17 +569,21 @@ export default function PublicBooking() {
             </div>
           </Section>
 
-          <Section title="Date & time" hint="Tap an open day, then a time.">
+          <Section title="Date & time" hint="Tap an open day, then choose a time.">
             {loadingSlots ? (
               <div style={{ fontSize: 13, color: t.textMuted }}>Loading availability…</div>
             ) : slotsError ? (
               <div style={{ fontSize: 13, color: t.textMuted }}>{slotsError}</div>
             ) : availableDates.length === 0 ? (
               <div style={{ fontSize: 13, color: t.textMuted }}>
-                No available times right now. Please try again later.
+                No available times right now. Choose manually below.
               </div>
             ) : (
-              <div className="pb-date-grid" style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 10 }}>
+              <div>
+                <div style={{ fontSize: 14.5, fontWeight: 650, color: t.textPrimary, marginBottom: 12 }}>
+                  Select a day
+                </div>
+                <div className="pb-date-grid" style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 10 }}>
                 {availableDates.slice(0, 14).map((d) => {
                   const active = form.date === d;
                   const dt = new Date(`${d}T12:00:00`);
@@ -603,7 +614,7 @@ export default function PublicBooking() {
                       <div style={{ fontSize: 11, fontWeight: 500, color: active ? t.accent : t.textMuted, marginBottom: 2, letterSpacing: 0.3 }}>
                         {weekday}
                       </div>
-                      <div style={{ fontSize: 15, fontWeight: 600, color: active ? t.accent : t.textPrimary, letterSpacing: -0.2 }}>
+                      <div style={{ fontSize: 15, fontWeight: 600, color: t.textPrimary, letterSpacing: -0.2 }}>
                         {day} {month}
                       </div>
                       <div style={{ fontSize: 11, color: active ? t.accent : t.textMuted, marginTop: 3 }}>
@@ -612,36 +623,109 @@ export default function PublicBooking() {
                     </button>
                   );
                 })}
+                </div>
               </div>
             )}
 
             {form.date && timesForDate.length > 0 && (
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                {timesForDate.map((tm) => {
-                  const active = form.time === tm;
-                  return (
-                    <button
-                      key={tm}
-                      type="button"
-                      onClick={() => handleChange("time", tm)}
-                      style={{
-                        padding: "10px 14px",
-                        borderRadius: 999,
-                        border: `1px solid ${active ? t.accent : t.border}`,
-                        background: active ? t.accent : "transparent",
-                        color: active ? "#fff" : t.textPrimary,
-                        fontSize: 13,
-                        fontWeight: 500,
-                        cursor: "pointer",
-                        fontFamily: "inherit",
+              <>
+                <div style={{ marginTop: 22, fontSize: 15, fontWeight: 600, color: t.textPrimary }}>
+                  Select a time
+                </div>
+                <div className="pb-time-grid" style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 10, marginTop: 12 }}>
+                  {timesForDate.map((tm) => {
+                    const active = form.time === tm;
+                    return (
+                      <button
+                        key={tm}
+                        type="button"
+                        onClick={() => handleChange("time", tm)}
+                        aria-pressed={active}
+                        style={{
+                          height: 46,
+                          padding: "0 8px",
+                          borderRadius: 10,
+                          border: `1px solid ${active ? t.accent : t.border}`,
+                          background: active
+                            ? t.accent
+                            : dark
+                              ? "rgba(255,255,255,0.03)"
+                              : "#fff",
+                          color: active ? "#fff" : t.textPrimary,
+                          fontSize: 14,
+                          fontWeight: 600,
+                          cursor: "pointer",
+                          fontFamily: "inherit",
+                          transition: "border-color 150ms ease, background 150ms ease, transform 150ms ease",
+                        }}
+                      >
+                        {tm}
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+
+            {/* Secondary manual alternative (keeps state synced with the selectors) */}
+            <div style={{ marginTop: 26, paddingTop: 18, borderTop: `1px solid ${t.borderSub}` }}>
+              <div style={{ fontSize: 13, fontWeight: 650, color: t.textSecondary, marginBottom: 10 }}>
+                Or choose manually
+              </div>
+              <div className="pb-grid">
+                <div>
+                  <label style={label}>Date</label>
+                  {availableDates.length > 0 ? (
+                    <select
+                      style={inputStyle}
+                      value={form.date}
+                      onChange={(e) => {
+                        handleChange("date", e.target.value);
+                        handleChange("time", "");
                       }}
                     >
-                      {tm}
-                    </button>
-                  );
-                })}
+                      <option value="">Select date</option>
+                      {availableDates.map((d) => (
+                        <option key={d} value={d}>
+                          {formatDateLabel(d)}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      style={inputStyle}
+                      type="date"
+                      value={form.date}
+                      onChange={(e) => handleChange("date", e.target.value)}
+                    />
+                  )}
+                </div>
+                <div>
+                  <label style={label}>Time</label>
+                  {timesForDate.length > 0 ? (
+                    <select
+                      style={inputStyle}
+                      value={form.time}
+                      onChange={(e) => handleChange("time", e.target.value)}
+                    >
+                      <option value="">Select time</option>
+                      {timesForDate.map((tm) => (
+                        <option key={tm} value={tm}>
+                          {tm}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      style={inputStyle}
+                      type="time"
+                      value={form.time}
+                      onChange={(e) => handleChange("time", e.target.value)}
+                    />
+                  )}
+                </div>
               </div>
-            )}
+            </div>
           </Section>
 
           <Section title="Payment">
@@ -768,24 +852,58 @@ export default function PublicBooking() {
             </div>
           )}
 
+          {/* Small confirmation summary */}
+          {(form.date || form.time) && (
+            <div style={{ marginTop: 2, padding: "0 2px 2px" }}>
+              <div style={{ fontSize: 13, fontWeight: 650, color: t.textSecondary, marginBottom: 6 }}>
+                Your booking
+              </div>
+              <div style={{ fontSize: 13, color: t.textPrimary, lineHeight: 1.5 }}>
+                {clampPlayers(form.players)} players
+                {form.date ? (
+                  <>
+                    {" "}
+                    · {formatDateLabel(form.date)}
+                  </>
+                ) : null}
+                {form.time ? (
+                  <>
+                    {" "}
+                    · {form.time}
+                  </>
+                ) : null}
+              </div>
+            </div>
+          )}
+
           <button
             type="submit"
             disabled={submitting}
+            onMouseEnter={(e) => {
+              if (!submitting) e.currentTarget.style.filter = "brightness(1.03)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.filter = "none";
+            }}
             style={{
               width: "100%",
-              padding: "15px 16px",
-              borderRadius: 14,
+              height: 54,
+              padding: "0 16px",
+              borderRadius: 12,
               border: "none",
               background: t.accent,
               color: "#fff",
-              fontSize: 16,
-              fontWeight: 600,
+              fontSize: 15,
+              fontWeight: 700,
               cursor: submitting ? "wait" : "pointer",
               opacity: submitting ? 0.7 : 1,
               fontFamily: "inherit",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
             }}
           >
-            {submitting ? "Sending…" : "Submit booking"}
+            {submitting ? "Sending…" : "Submit booking ->"}
           </button>
         </form>
 
