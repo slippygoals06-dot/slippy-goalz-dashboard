@@ -13,8 +13,23 @@ export default function CustomerHistory({ customer, bookings, invoices = [], onC
     "Water Damage":8000,"Charging Port":3000,"Camera Repair":4000
   };
 
-  // Match across legacy formats (0300…) and normalized (+92…) phones
-  const history = bookings.filter(b => phonesMatch(b.Phone, customer.Phone));
+  // Match across legacy formats (0300…) and normalized (+92…) phones.
+  // Also sort newest-first by booking Date+Time to keep history order stable.
+  const bookingSortKey = (b) => {
+    const dt = `${b.Date || ""}T${b.Time || ""}:00`;
+    const parsed = new Date(dt);
+    if (!isNaN(parsed.getTime())) return parsed.getTime();
+
+    const createdAt = b.created_at || b.createdAt;
+    if (!createdAt) return 0;
+    const c = new Date(createdAt);
+    return isNaN(c.getTime()) ? 0 : c.getTime();
+  };
+
+  const history = bookings
+    .filter(b => phonesMatch(b.Phone, customer.Phone))
+    .slice()
+    .sort((a, b) => bookingSortKey(b) - bookingSortKey(a));
   const totalSpent = history.filter(b => b.Status === "Confirmed").reduce((s,b) => s+(SERVICE_PRICES[b.Service]||0), 0);
   const firstVisit = history.length ? history[history.length-1].Date : "—";
   const lastVisit  = history.length ? history[0].Date : "—";

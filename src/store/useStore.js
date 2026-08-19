@@ -238,6 +238,8 @@ export const useStore = create(devtools((set, get) => ({
       });
     } catch (err) {
       console.error("Payment update error:", err);
+      // Re-throw so UI can revert + show feedback.
+      throw err;
     }
   },
 
@@ -466,6 +468,8 @@ export const useStore = create(devtools((set, get) => ({
       });
     } catch (err) {
       console.error("Status update error:", err);
+      // Re-throw so UI can revert + show feedback.
+      throw err;
     }
   },
 
