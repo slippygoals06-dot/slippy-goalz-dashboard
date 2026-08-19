@@ -38,7 +38,6 @@ import { exportToCSV } from "../utils/export";
 import { formatDate, formatPhone, whatsappLink, phoneKey, getInitials } from "../utils/format";
 import { isStalePending } from "../utils/sla";
 import { getCustomerTier } from "../utils/customerTier";
-import { PaymentStatusCycler } from "../components/PaymentStatus";
 import { usePaymentStatus } from "../hooks/usePaymentStatus";
 import { completeBookingWithInvoice, updateBooking } from "../api";
 import { SERVICE_PRICES } from "../constants";
@@ -1804,36 +1803,80 @@ export default function Bookings() {
                       <td style={TD}>
                         {b.Source ? <StatusBadge status={b.Source} /> : <span style={{ color: t.textMuted }}>—</span>}
                       </td>
-                      <td
-                        style={TD}
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <button
-                          type="button"
-                          onClick={async () => {
-                            if (b.Status === "Completed" || b.Status === "Cancelled") return;
-                            const cycle = { Pending: "Confirmed", Confirmed: "Rejected", Rejected: "Pending" };
-                            const next = cycle[b.Status] || "Pending";
-                            if (!window.confirm(`Change status to ${next}?`)) return;
-                            await updateBookingStatus(b["Booking ID"], next);
+                      <td style={TD} onClick={(e) => e.stopPropagation()}>
+                        <select
+                          value={b.Status || "Pending"}
+                          disabled={b.Status === "Completed" || b.Status === "Cancelled"}
+                          onChange={async (e) => {
+                            const val = e.target.value;
+                            const bookingId = b["Booking ID"];
+                            if (val === "Reschedule") {
+                              const next = "Pending";
+                              await updateBookingStatus(bookingId, next);
+                              showToast("Rescheduled (set to Pending)");
+                              return;
+                            }
+                            if (!window.confirm(`Change status to ${val}?`)) return;
+                            await updateBookingStatus(bookingId, val);
                           }}
                           style={{
-                            background: "none",
-                            border: "none",
-                            cursor: b.Status === "Completed" || b.Status === "Cancelled" ? "default" : "pointer",
-                            padding: 0,
+                            width: "100%",
+                            maxWidth: 160,
+                            padding: "8px 10px",
+                            borderRadius: 10,
+                            border: `1px solid ${t.border}`,
+                            background: t.name === "dark" ? "rgba(255,255,255,0.03)" : "#fff",
+                            color: t.textPrimary,
+                            fontSize: 13,
+                            fontWeight: 600,
+                            cursor:
+                              b.Status === "Completed" || b.Status === "Cancelled" ? "default" : "pointer",
+                            fontFamily: "inherit",
+                            outline: "none",
                           }}
+                          aria-label="Booking status"
                         >
-                          <StatusBadge status={b.Status} pulse={b.Status === "Pending"} />
-                        </button>
+                          {["Pending", "Confirmed", "Cancelled", "Rejected", "Completed", "Reschedule"].map((s) => (
+                            <option key={s} value={s}>
+                              {s}
+                            </option>
+                          ))}
+                        </select>
                       </td>
+
                       <td style={TD} onClick={(e) => e.stopPropagation()}>
-                        <PaymentStatusCycler
-                          status={b["Payment Status"]}
-                          bookingId={b["Booking ID"]}
-                          onChange={(bookingId) => changeStatus(bookingId, b["Payment Status"])}
-                          loading={loadingId === b["Booking ID"]}
-                        />
+                        <select
+                          value={
+                            b["Payment Status"] === "Paid"
+                              ? "Full Payment"
+                              : b["Payment Status"] === "Onsite"
+                                ? "Unpaid"
+                                : b["Payment Status"] || "Unpaid"
+                          }
+                          disabled={loadingId === b["Booking ID"]}
+                          onChange={(e) => changeStatus(b["Booking ID"], e.target.value)}
+                          style={{
+                            width: "100%",
+                            maxWidth: 160,
+                            padding: "8px 10px",
+                            borderRadius: 10,
+                            border: `1px solid ${t.border}`,
+                            background: t.name === "dark" ? "rgba(255,255,255,0.03)" : "#fff",
+                            color: t.textPrimary,
+                            fontSize: 13,
+                            fontWeight: 600,
+                            cursor: loadingId === b["Booking ID"] ? "wait" : "pointer",
+                            fontFamily: "inherit",
+                            outline: "none",
+                          }}
+                          aria-label="Payment status"
+                        >
+                          {PAYMENT_STATUSES.map((s) => (
+                            <option key={s} value={s}>
+                              {s}
+                            </option>
+                          ))}
+                        </select>
                       </td>
                       <td
                         style={{ ...TD, textAlign: "right", whiteSpace: "nowrap" }}
