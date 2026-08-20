@@ -1,6 +1,8 @@
 import { useEffect, useRef } from "react";
 import { useStore } from "../store/useStore";
 import { useToast } from "../context/ToastContext";
+import { getMe } from "../api";
+import { saveSession, loadSession } from "../constants/permissions";
 
 export function useInit() {
   const fetchAll = useStore(s => s.fetchAll);
@@ -11,6 +13,21 @@ export function useInit() {
   useEffect(() => {
     if (initialized.current) return;
     initialized.current = true;
+
+    // Refresh role/permissions from API (staff may have been updated)
+    (async () => {
+      try {
+        const me = await getMe();
+        const prev = loadSession();
+        saveSession({
+          username: me.username || prev.user,
+          role: me.role || prev.role,
+          permissions: me.permissions,
+        });
+      } catch {
+        // Token invalid / offline — leave existing session; PrivateRoute handles auth
+      }
+    })();
 
     // Initial fetch
     fetchAll(false, showToast);

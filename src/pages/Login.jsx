@@ -108,7 +108,17 @@ export default function Login() {
       localStorage.setItem("slippy_token", data.access_token);
       localStorage.setItem("auth", "true");
       recordLoginSuccess(username);
-      navigate("/");
+      const { saveSession, canAccessPath } = await import("../constants/permissions");
+      const session = saveSession({
+        username: data.username,
+        role: data.role,
+        permissions: data.permissions,
+      });
+      const home =
+        ["/", "/bookings", "/slots", "/chats", "/settings"].find((p) =>
+          canAccessPath(p, session)
+        ) || "/settings";
+      navigate(home);
     } catch {
       setError("Connection error. Please try again.");
       setLoading(false);

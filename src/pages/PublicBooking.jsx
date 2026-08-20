@@ -75,6 +75,11 @@ export default function PublicBooking() {
   const [done, setDone] = useState(false);
   const [selectedImages, setSelectedImages] = useState([]);
   const imgInputRef = useRef(null);
+  const idempotencyKeyRef = useRef(
+    typeof crypto !== "undefined" && crypto.randomUUID
+      ? crypto.randomUUID()
+      : `pb-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+  );
 
   useEffect(() => {
     async function loadSlots() {
@@ -244,7 +249,10 @@ export default function PublicBooking() {
     try {
       const res = await fetch(`${API}/bookings/`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Idempotency-Key": idempotencyKeyRef.current,
+        },
         body: JSON.stringify(booking),
       });
       if (!res.ok) {

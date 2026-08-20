@@ -72,6 +72,7 @@ export function SecurityProvider({ children }) {
   const logout = useCallback((reason = "Manual logout") => {
     addLog("Logout", reason);
     localStorage.removeItem("auth");
+    localStorage.removeItem("slippy_token");
     localStorage.removeItem("slippy_session");
     clearTimeout(timeoutRef.current);
     clearTimeout(warnRef.current);
@@ -182,7 +183,20 @@ export function SecurityProvider({ children }) {
 
   const recordLoginSuccess = useCallback((username) => {
     localStorage.removeItem("slippy_attempts");
-    localStorage.setItem("slippy_session", JSON.stringify({ user: username, start: Date.now() }));
+    let prev = {};
+    try {
+      prev = JSON.parse(localStorage.getItem("slippy_session") || "{}") || {};
+    } catch {
+      prev = {};
+    }
+    localStorage.setItem(
+      "slippy_session",
+      JSON.stringify({
+        ...prev,
+        user: username,
+        start: Date.now(),
+      })
+    );
     addLog("Login Success", `User: ${username}`);
     refreshPinStatus();
   }, [addLog, refreshPinStatus]);

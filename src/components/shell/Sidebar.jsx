@@ -5,6 +5,7 @@ import ProfileMenu from "./ProfileMenu";
 import { BUSINESS_NAME, BRAND_INITIAL, BRAND_ACCENT } from "../../constants/brand";
 import { NAV_GROUPS, navByPath } from "./navConfig";
 import { SHELL, hoverFill, divider, sidebarSurface } from "./shellTokens";
+import { filterNavPaths, loadSession } from "../../constants/permissions";
 
 /**
  * Premium app sidebar — quiet nav, left accent active state, compact profile
@@ -22,6 +23,8 @@ export default function Sidebar({
   const hoverBg = hoverFill(dark);
   const sidebarBg = sidebarSurface(dark);
   const inset = SHELL.sidebarInset;
+  const session = loadSession();
+
 
   return (
     <div
@@ -109,7 +112,10 @@ export default function Sidebar({
         }}
         aria-label="Main"
       >
-        {NAV_GROUPS.map((group, gi) => (
+        {NAV_GROUPS.map((group, gi) => {
+          const paths = filterNavPaths(group.paths, session);
+          if (!paths.length) return null;
+          return (
           <div key={group.label} style={{ marginTop: gi === 0 ? SHELL.gap.sm : SHELL.gap.lg }}>
             {!collapsed ? (
               <div
@@ -140,7 +146,7 @@ export default function Sidebar({
             )}
 
             <div style={{ display: "flex", flexDirection: "column", gap: SHELL.gap.xs }}>
-              {group.paths.map((path) => {
+              {paths.map((path) => {
                 const item = itemsByPath[path];
                 if (!item) return null;
                 const { label, badge } = item;
@@ -264,7 +270,8 @@ export default function Sidebar({
               })}
             </div>
           </div>
-        ))}
+          );
+        })}
       </nav>
 
       {collapsed ? (

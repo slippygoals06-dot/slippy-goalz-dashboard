@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ChevronDown, LogOut, Settings, Moon, Sun } from "lucide-react";
 import { useTheme } from "../../context/ThemeContext";
 import { BUSINESS_NAME } from "../../constants/brand";
+import { clearSession } from "../../constants/permissions";
 import { SHELL, hoverFill, iconButtonStyle } from "./shellTokens";
 
 /**
@@ -33,6 +34,8 @@ export default function ProfileMenu({ compact = false, align = "left" }) {
 
   const logout = () => {
     localStorage.removeItem("auth");
+    localStorage.removeItem("slippy_token");
+    clearSession();
     navigate("/login");
   };
 

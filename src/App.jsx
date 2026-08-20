@@ -1,5 +1,6 @@
+import { useEffect, useRef } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
-import { ToastProvider } from "./context/ToastContext";
+import { ToastProvider, useToast } from "./context/ToastContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { SecurityProvider } from "./context/SecurityContext";
 import { CommandProvider } from "./context/CommandContext";
@@ -25,9 +26,51 @@ import ClientDemo from "./pages/ClientDemo";
 import CaseStudy from "./pages/CaseStudy";
 import DesignSystemTest from "./pages/DesignSystemTest";
 import PartsScan from "./pages/PartsScan";
+import { canAccessPath, loadSession } from "./constants/permissions";
 
 function PrivateRoute({ children }) {
   return localStorage.getItem("auth") ? children : <Navigate to="/login" />;
+}
+
+function firstAllowedPath(session) {
+  const order = [
+    "/",
+    "/bookings",
+    "/slots",
+    "/leads",
+    "/waitlist",
+    "/chats",
+    "/invoices",
+    "/cash",
+    "/analytics",
+    "/settings",
+  ];
+  for (const p of order) {
+    if (canAccessPath(p, session)) return p;
+  }
+  return "/settings";
+}
+
+function PermissionRoute({ children }) {
+  const { pathname } = useLocation();
+  const { showToast } = useToast();
+  const session = loadSession();
+  const allowed = canAccessPath(pathname, session);
+  const fallback = firstAllowedPath(session);
+  const warned = useRef(false);
+
+  useEffect(() => {
+    if (!allowed && !warned.current) {
+      warned.current = true;
+      showToast?.("You don't have access to that page.", "error");
+    }
+  }, [allowed, showToast, pathname]);
+
+  if (!allowed) {
+    if (pathname === fallback) return children;
+    return <Navigate to={fallback} replace />;
+  }
+  return children;
 }
 
 function AppInit({ children }) {
@@ -48,6 +91,10 @@ function OwnerBotGate() {
     return null;
   }
   return <OwnerBot />;
+}
+
+function Guarded({ children }) {
+  return <PermissionRoute>{children}</PermissionRoute>;
 }
 
 export default function App() {
@@ -71,19 +118,19 @@ export default function App() {
                       <AppInit>
                         <Layout>
                           <Routes>
-                            <Route path="/" element={<Dashboard />} />
-                            <Route path="/bookings" element={<Bookings />} />
-                            <Route path="/invoices" element={<Invoices />} />
-                            <Route path="/cash" element={<CashLedger />} />
-                            <Route path="/slots" element={<Slots />} />
-                            <Route path="/parts/scan" element={<PartsScan />} />
-                            <Route path="/leads" element={<Leads />} />
-                            <Route path="/waitlist" element={<Waitlist />} />
-                            <Route path="/chats" element={<Chats />} />
-                            <Route path="/analytics" element={<Analytics />} />
-                            <Route path="/audit" element={<AuditLog />} />
-                            <Route path="/security" element={<Security />} />
-                            <Route path="/settings" element={<Settings />} />
+                            <Route path="/" element={<Guarded><Dashboard /></Guarded>} />
+                            <Route path="/bookings" element={<Guarded><Bookings /></Guarded>} />
+                            <Route path="/invoices" element={<Guarded><Invoices /></Guarded>} />
+                            <Route path="/cash" element={<Guarded><CashLedger /></Guarded>} />
+                            <Route path="/slots" element={<Guarded><Slots /></Guarded>} />
+                            <Route path="/parts/scan" element={<Guarded><PartsScan /></Guarded>} />
+                            <Route path="/leads" element={<Guarded><Leads /></Guarded>} />
+                            <Route path="/waitlist" element={<Guarded><Waitlist /></Guarded>} />
+                            <Route path="/chats" element={<Guarded><Chats /></Guarded>} />
+                            <Route path="/analytics" element={<Guarded><Analytics /></Guarded>} />
+                            <Route path="/audit" element={<Guarded><AuditLog /></Guarded>} />
+                            <Route path="/security" element={<Guarded><Security /></Guarded>} />
+                            <Route path="/settings" element={<Guarded><Settings /></Guarded>} />
                           </Routes>
                         </Layout>
                       </AppInit>
