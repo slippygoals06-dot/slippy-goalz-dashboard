@@ -176,6 +176,13 @@ export const PAYMENT_COLORS = {
     dot: "#5F6368",
     shadow: "none",
   },
+  Refunded: {
+    bg: "#F5F3FF",
+    color: "#6D28D9",
+    border: "#DDD6FE",
+    dot: "#8B5CF6",
+    shadow: "none",
+  },
 };
 
 export const SERVICE_PRICES = {

@@ -2,7 +2,7 @@ import { useTheme, cardStyle } from "../context/ThemeContext";
 import { PAYMENT_COLORS } from "../constants";
 import { Check } from "lucide-react";
 
-const STATUSES = ["Unpaid", "Half Payment", "Full Payment"];
+const STATUSES = ["Unpaid", "Half Payment", "Full Payment", "Onsite", "Refunded"];
 
 function paymentStyle(status) {
   return PAYMENT_COLORS[status] || PAYMENT_COLORS.Unpaid;

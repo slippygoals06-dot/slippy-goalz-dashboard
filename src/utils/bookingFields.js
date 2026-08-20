@@ -1,12 +1,13 @@
 ﻿/** Map Slippy Goalz booking UI <-> existing /bookings API columns. */
 
-export const PAYMENT_STATUSES = ["Unpaid", "Half Payment", "Full Payment", "Onsite"];
+export const PAYMENT_STATUSES = ["Unpaid", "Half Payment", "Full Payment", "Onsite", "Refunded"];
 export const PAYMENT_STATUS_LABELS = {
   Unpaid: "Unpaid",
   "Half Payment": "Half",
   "Full Payment": "Paid",
   Paid: "Paid",
   Onsite: "Onsite",
+  Refunded: "Refunded",
 };
 export const PAYMENT_MODES = ["Cash", "Online"];
 export const SERVICE_LABEL = "Pitch booking";
@@ -46,6 +47,7 @@ export function normalizePaymentStatus(status) {
   if (/^full(\s*payment)?$/i.test(s) || /^paid$/i.test(s)) return "Full Payment";
   if (/^half(\s*payment)?$/i.test(s)) return "Half Payment";
   if (/^onsite$/i.test(s)) return "Onsite";
+  if (/^refunded$/i.test(s)) return "Refunded";
   if (PAYMENT_STATUSES.includes(s)) return s;
   return "Unpaid";
 }
