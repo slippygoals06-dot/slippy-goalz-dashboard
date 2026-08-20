@@ -26,8 +26,14 @@ export default function CustomerHistory({ customer, bookings, invoices = [], onC
     return isNaN(c.getTime()) ? 0 : c.getTime();
   };
 
+  // Prefer permanent customer_id; fall back to phonesMatch for unbackfilled rows.
   const history = bookings
-    .filter(b => phonesMatch(b.Phone, customer.Phone))
+    .filter((b) => {
+      if (customer.customer_id && b.customer_id) {
+        return b.customer_id === customer.customer_id;
+      }
+      return phonesMatch(b.Phone, customer.Phone);
+    })
     .slice()
     .sort((a, b) => bookingSortKey(b) - bookingSortKey(a));
   const totalSpent = history.filter(b => b.Status === "Confirmed").reduce((s,b) => s+(SERVICE_PRICES[b.Service]||0), 0);

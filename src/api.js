@@ -52,6 +52,12 @@ export const updateBooking = (id, data) =>
 export const deleteBooking = (id) =>
   apiFetch(`/bookings/${id}`, { method: "DELETE" });
 
+// Customers (permanent identity)
+export const getCustomer = (id) =>
+  apiFetch(`/customers/${encodeURIComponent(id)}`);
+export const getCustomerBookings = (id) =>
+  apiFetch(`/customers/${encodeURIComponent(id)}/bookings`);
+
 // Slots
 export const getSlots = () => apiFetch("/slots/");
 export const createSlot = (data) =>
