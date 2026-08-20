@@ -36,7 +36,7 @@ import StatusBadge from "../components/StatusBadge";
 import { SkeletonBlock } from "../components/Skeleton";
 import { Button } from "../design-system";
 import { radius, duration, ease, color, spacing } from "../design-system/tokens";
-import { getChatSessions, getWhatsAppIntegrationStatus, sendWhatsAppText } from "../api";
+import { getChatSessions, getWhatsAppIntegrationStatus, sendWhatsAppText, suggestChatReply } from "../api";
 import { exportToCSV } from "../utils/export";
 import { useStore } from "../store/useStore";
 import { getCustomerTier } from "../utils/customerTier";
@@ -641,6 +641,8 @@ export default function Chats() {
   const [search, setSearch] = useState("");
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
+  const [aiSuggestion, setAiSuggestion] = useState("");
+  const [aiSuggestionLoading, setAiSuggestionLoading] = useState(false);
   const [threadKey, setThreadKey] = useState(0);
   const [waIntegration, setWaIntegration] = useState(null);
   const [connectOpen, setConnectOpen] = useState(false);
@@ -969,8 +971,43 @@ export default function Chats() {
     : [];
 
   const stubSuggestion =
-    "Thanks for reaching out — I can help book a repair slot. What device and issue are you dealing with?";
+    "Thanks for reaching out — I can help with pitch bookings. What date and time work for you?";
   const showSuggestion = selected && lastRole(selected.history) === "user" && !selected.takeover;
+  const activeSuggestion = aiSuggestion || stubSuggestion;
+
+  useEffect(() => {
+    if (!showSuggestion || !selected) {
+      setAiSuggestion("");
+      setAiSuggestionLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setAiSuggestionLoading(true);
+    const history = (selected.history || [])
+      .filter((m) => m?.content)
+      .slice(-8)
+      .map((m) => ({ role: m.role === "assistant" ? "assistant" : "user", content: String(m.content) }));
+    suggestChatReply({
+      sessionId: selected.session_id,
+      history,
+      customerName: selected.collected?.name || selected.name,
+      channel: selected.channel,
+    })
+      .then((data) => {
+        if (cancelled) return;
+        const text = (data?.suggestion || "").trim();
+        setAiSuggestion(text || stubSuggestion);
+      })
+      .catch(() => {
+        if (!cancelled) setAiSuggestion(stubSuggestion);
+      })
+      .finally(() => {
+        if (!cancelled) setAiSuggestionLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selected?.session_id, selected?.updated_at, showSuggestion]);
 
   const aiStatusMap = { light: AI_STATUS_STYLE, dark: AI_STATUS_STYLE_DARK };
   const paneShell = {
@@ -1662,22 +1699,28 @@ export default function Chats() {
                       <span style={{ fontSize: 11, color: t.textMuted, fontWeight: 500 }}>Suggested reply</span>
                     </div>
                     <p style={{ margin: "0 0 12px", fontSize: 13, color: t.textSecondary, lineHeight: 1.5 }}>
-                      {stubSuggestion}
+                      {aiSuggestionLoading ? "Thinking of a reply…" : activeSuggestion}
                     </p>
                     <div style={{ display: "flex", gap: 8 }}>
                       <Button
                         type="button"
                         variant="primary"
                         size="sm"
+                        disabled={aiSuggestionLoading}
                         onClick={() => {
-                          // TODO: wire AI suggestion endpoint
-                          setDraft(stubSuggestion);
+                          setDraft(activeSuggestion);
                           showToast("Suggestion copied to composer");
                         }}
                       >
-                        Send
+                        Use reply
                       </Button>
-                      <Button type="button" variant="secondary" size="sm" onClick={() => setDraft(stubSuggestion)}>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        disabled={aiSuggestionLoading}
+                        onClick={() => setDraft(activeSuggestion)}
+                      >
                         Edit
                       </Button>
                     </div>
@@ -1848,10 +1891,9 @@ export default function Chats() {
 
                   <PanelSection title="Suggested Replies" t={t}>
                     {[
-                      stubSuggestion,
-                      selected.collected?.device
-                        ? `I can check the next available slot for your ${selected.collected.device}. Would you like today or tomorrow?`
-                        : "Would you like me to check the next available repair slot?",
+                      activeSuggestion,
+                      "We have open pitch slots — tell me your preferred date and time and I’ll check availability.",
+                      "You can also book instantly here: /book",
                     ].map((s, i) => (
                       <button
                         key={i}

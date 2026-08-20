@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Slippy Goalz — Book a Repair</title>
+  <title>Slippy Goalz Arena — Chat</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -457,9 +457,9 @@
 <div class="ambient"></div>
 
 <div class="demo-page">
-  <h1>We <span class="f">F</span>ix</h1>
-  <div class="sub">Mobile Service</div>
-  <p>Premium phone repair · Chat to book</p>
+  <h1>Slippy <span class="f">Goalz</span></h1>
+  <div class="sub">Arena Booking</div>
+  <p>Book a pitch · Chat for help</p>
   <p style="margin-top:40px; font-size:12px; opacity:0.4">👇 Chat widget — click the button</p>
 </div>
 
@@ -479,8 +479,8 @@
       </svg>
     </div>
     <div class="w-info">
-      <div class="w-name">We <span class="f">Fix</span> Assistant</div>
-      <div class="w-status">Online — happy to help</div>
+      <div class="w-name">Slippy <span class="f">Goalz</span> Assistant</div>
+      <div class="w-status">Online — pitch booking help</div>
     </div>
     <div class="w-powered">Powered by<br><span>Slippy Goalz AI</span></div>
   </div>
@@ -499,7 +499,7 @@
 
 <script>
   const API = "https://slippy-goalz-backend-production.up.railway.app";
-  const BOOK_URL = "https://irepair-dashboard.vercel.app/book";
+  const BOOK_URL = "https://slippy-goalz-dashboard-blue.vercel.app/book";
   const BOT_AVATAR = `<div class="msg-avatar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 4.8L19 9.5l-4 3.2L16.2 18 12 15.2 7.8 18l1.2-5.3-4-3.2 5.2-1.7L12 3z"/></svg></div>`;
 
   let history = [];
@@ -548,11 +548,11 @@
       greeted = true;
       setTimeout(() => {
         addBotMessage(
-          "Hey! 👋 Good to see you — I'm the Slippy Goalz assistant.\n\n" +
-          "I can help with prices, shop hours, or getting a repair lined up. " +
-          "If you want to book now, I can take you straight to the booking page."
+          "Hey! 👋 Welcome to Slippy Goalz Arena.\n\n" +
+          "I can help with prices, hours, slots, or booking a pitch. " +
+          "Want to book now? I can send you straight to the booking page."
         );
-        setTimeout(() => addQuickReplies(["📅 Book a Repair", "💰 Check Prices", "🕐 Shop Hours", "📍 Location"]), 500);
+        setTimeout(() => addQuickReplies(["📅 Book a Pitch", "💰 Check Prices", "🕐 Shop Hours", "📍 Location"]), 500);
       }, 350);
     }
     if (isOpen) setTimeout(() => document.getElementById('chatInput').focus(), 350);
@@ -700,23 +700,21 @@
     const greetings = ["hi", "hey", "hello", "yo", "salam", "assalam", "asalam"];
     if (greetings.includes(t) || greetings.some((g) => t.startsWith(g + " ") || t.startsWith(g + "!"))) {
       return (
-        "Hey! 👋 Nice to hear from you.\n\n" +
-        "I can help with prices, hours, or getting a repair booked. What do you need?"
+        "Hey! 👋 Welcome to Slippy Goalz Arena.\n\n" +
+        "I can help with prices, hours, slots, or booking a pitch. What do you need?"
       );
     }
 
     if (
       t.includes("price") || t.includes("cost") || t.includes("kitna") ||
-      t.includes("charges") || t.includes("check prices") || t.includes("💰")
+      t.includes("charges") || t.includes("check prices") || t.includes("💰") || t.includes("rate")
     ) {
       return (
-        "Sure — rough prices for Lahore:\n\n" +
-        "• Screen — Rs 4,000 to 14,000\n" +
-        "• Battery — Rs 3,500 to 5,500\n" +
-        "• Charging port — Rs 2,500 to 4,000\n" +
-        "• Software — Rs 1,500 to 3,000\n\n" +
-        "Final quote depends on the exact model. Want me to open booking so you can lock a time?\n\n" +
-        BOOK_URL
+        "Approx pitch rates:\n\n" +
+        "• Standard session (up to 10 players): Rs 3,000 – 5,000 / hour\n" +
+        "• Peak evenings / weekends may be higher\n" +
+        "• Exact price confirmed on booking\n\n" +
+        "Book here:\n" + BOOK_URL
       );
     }
 
@@ -724,22 +722,22 @@
       t.includes("hour") || t.includes("open") || t.includes("timing") ||
       t.includes("shop hours") || t.includes("🕐")
     ) {
-      return "We're open Mon–Sat, 10 AM to 8 PM. Sundays we're closed.\n\nShop 14, Al-Hamra Arcade, Gulberg III, Lahore — come anytime during those hours.";
+      return "Pitch slots typically run daily from about 8 AM to 12 AM. Live availability is on the booking page.";
     }
 
-    if (t.includes("book") || t.includes("📅") || t.includes("repair") || t.includes("appointment")) {
+    if (t.includes("book") || t.includes("📅") || t.includes("pitch") || t.includes("slot") || t.includes("appointment")) {
       return (
-        "Sure — when you're ready, tap the button below to open the booking page and pick your device, issue, date and time.\n\n" +
+        "Sure — tap below to open booking and pick your date, time, and players.\n\n" +
         BOOK_URL
       );
     }
 
     if (t.includes("where") || t.includes("location") || t.includes("address") || t.includes("kahan") || t.includes("📍")) {
-      return "We're at Shop 14, Al-Hamra Arcade, Main Boulevard Gulberg III, Lahore.\n\nMaps: https://maps.google.com/?q=FixPro+Gulberg+Lahore\nOr call +92 300 1234567 if you need directions.";
+      return "Slippy Goalz Arena, Lahore.\n\nCall +92 300 1234567 if you need directions, or book online:\n" + BOOK_URL;
     }
 
     if (t.includes("reschedule") || t.includes("cancel")) {
-      return "For reschedule or cancel, the fastest way is WhatsApp/call on +92 300 1234567 with your booking phone number — the team can sort it in a minute.";
+      return "For reschedule or cancel, share the phone number on your booking here in chat, or call +92 300 1234567.";
     }
 
     return (
@@ -772,8 +770,8 @@
       setTimeout(() => {
         hideTyping();
         const reply =
-          "Sure — tap the button below when you want to book. " +
-          "It'll take you to the booking page so you can pick device, issue, date and time.\n\n" +
+          "Sure — tap the button below when you want to book a pitch. " +
+          "Pick your date, time, and players on the booking page.\n\n" +
           BOOK_URL;
         addBotMessage(reply);
         history.push({ role: 'assistant', content: reply });
@@ -812,7 +810,7 @@
         if (data.slot_buttons?.length)  setTimeout(() => addSlotButtons(data.slot_buttons), 300);
         else if (data.time_buttons?.length) setTimeout(() => addTimeButtons(data.time_buttons), 300);
         else if (data.quick_replies?.length) setTimeout(() => addQuickReplies(data.quick_replies), 300);
-        else setTimeout(() => addQuickReplies(["📅 Book a Repair", "💰 Check Prices", "🕐 Shop Hours"]), 300);
+        else setTimeout(() => addQuickReplies(["📅 Book a Pitch", "💰 Check Prices", "🕐 Shop Hours"]), 300);
         if (data.session_reset) history = [];
       }, delay);
 
@@ -823,7 +821,7 @@
       );
       addBotMessage(reply);
       history.push({ role: 'assistant', content: reply });
-      setTimeout(() => addQuickReplies(["📅 Book a Repair", "💰 Check Prices", "🕐 Shop Hours"]), 300);
+      setTimeout(() => addQuickReplies(["📅 Book a Pitch", "💰 Check Prices", "🕐 Shop Hours"]), 300);
       console.error(err);
     }
 

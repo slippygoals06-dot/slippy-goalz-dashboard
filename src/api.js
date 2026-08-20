@@ -80,6 +80,16 @@ export const getChatSessions = (limit = 100) =>
   apiFetch(`/chat/sessions?limit=${encodeURIComponent(limit)}`);
 export const ownerChat = (messages) =>
   apiFetch("/chat/owner", { method: "POST", body: JSON.stringify({ messages }) });
+export const suggestChatReply = ({ sessionId, history, customerName, channel }) =>
+  apiFetch("/chat/suggest-reply", {
+    method: "POST",
+    body: JSON.stringify({
+      session_id: sessionId || null,
+      history: history || [],
+      customer_name: customerName || null,
+      channel: channel || null,
+    }),
+  });
 export const customerChat = (message) =>
   apiFetch("/chat/customer", {
     method: "POST",

@@ -150,19 +150,31 @@ export default function AiBriefing({ range = "This Week" }) {
       .map((b) => ({
         name: b.Name || "Customer",
         time: b.Time || "—",
-        service: b.Service || "Repair",
+        service: b.Service || "Pitch booking",
         date: formatDate(b.Date),
         status: b.Status,
       }));
 
     const revenue = week
-      .filter((b) => b.Status === "Confirmed")
-      .reduce((s, b) => s + (SERVICE_PRICES[b.Service] || 0), 0);
+      .filter((b) => b.Status === "Confirmed" || b.Status === "Completed")
+      .reduce((s, b) => {
+        if (b.amount != null && b.amount !== "") return s + (Number(b.amount) || 0);
+        return s + (SERVICE_PRICES[b.Service] || 0);
+      }, 0);
+
+    const rescheduleCount = bookings.filter((b) => b.Status === "Reschedule").length;
+    if (rescheduleCount > 0) {
+      priorities.unshift({
+        text: `${rescheduleCount} booking${rescheduleCount === 1 ? "" : "s"} marked Reschedule`,
+        tone: "warn",
+        path: "/bookings?filter=Reschedule",
+      });
+    }
 
     const headline =
       priorities.length > 0
         ? priorities[0].text
-        : suggestions[0]?.text || "Shop is running smoothly";
+        : suggestions[0]?.text || "Arena is running smoothly";
 
     return {
       priorities,
