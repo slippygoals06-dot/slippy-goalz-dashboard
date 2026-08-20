@@ -1,6 +1,6 @@
 import { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Check,
   X,
@@ -1349,6 +1349,7 @@ export default function Bookings() {
   const { theme: t } = useTheme();
   const { showToast } = useToast();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { changeStatus, loadingId } = usePaymentStatus();
   const deleteBooking = useStore((s) => s.deleteBooking);
   const updateBookingStatus = useStore((s) => s.updateBookingStatus);
@@ -1363,6 +1364,27 @@ export default function Bookings() {
   const [focusedRow, setFocusedRow] = useState(-1);
   const [statusLoadingId, setStatusLoadingId] = useState(null);
   const searchRef = useRef(null);
+  const openedFromQuery = useRef(null);
+
+  // Deep-link from notifications: /bookings?open=ID&filter=Pending
+  useEffect(() => {
+    const openId = searchParams.get("open");
+    const filterParam = searchParams.get("filter");
+    const allowed = new Set(["All", "Pending", "Confirmed", "Reschedule", "Cancelled", "Completed", "Rejected"]);
+    if (filterParam && allowed.has(filterParam)) {
+      setFilter(filterParam);
+    }
+    if (!openId || loading || !bookings.length) return;
+    if (openedFromQuery.current === openId) return;
+    const match = bookings.find((b) => String(b["Booking ID"]) === String(openId));
+    if (match) {
+      openedFromQuery.current = openId;
+      setSelected(match);
+      const next = new URLSearchParams(searchParams);
+      next.delete("open");
+      setSearchParams(next, { replace: true });
+    }
+  }, [searchParams, bookings, loading, setSearchParams]);
 
   const handleStatusChange = useCallback(
     async (bookingId, apiStatus, displayStatus) => {

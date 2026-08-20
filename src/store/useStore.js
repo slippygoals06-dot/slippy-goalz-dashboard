@@ -6,6 +6,7 @@ import { API_URL as API } from "../config";
 
 let fetchingRef = false;
 let prevPending = null;
+let knownBookingIds = null;
 
 const LOCAL_SLOTS_KEY = "slippy_local_slots";
 
@@ -147,8 +148,44 @@ export const useStore = create(devtools((set, get) => ({
 
       const safeB = Array.isArray(b) ? b : [];
       const pendingNow = safeB.filter(x => x.Status === "Pending").length;
+      const idsNow = new Set(safeB.map((row) => row["Booking ID"]).filter(Boolean));
 
-      if (prevPending !== null && pendingNow > prevPending && showToast) {
+      if (knownBookingIds) {
+        const fresh = safeB.filter((row) => {
+          const id = row["Booking ID"];
+          return id && !knownBookingIds.has(id);
+        });
+        for (const row of fresh.slice(0, 5)) {
+          const id = row["Booking ID"];
+          const name = row.Name || "Customer";
+          const when = [row.Date, row.Time].filter(Boolean).join(" · ");
+          useNotifStore.getState().push(
+            "New booking",
+            `${name}${when ? ` · ${when}` : ""}`,
+            "booking",
+            `/bookings?open=${encodeURIComponent(id)}&filter=Pending`,
+            { bookingId: id, bookingName: name, filter: "Pending" }
+          );
+        }
+        if (fresh.length > 5) {
+          useNotifStore.getState().push(
+            "More new bookings",
+            `${fresh.length - 5} additional booking${fresh.length - 5 === 1 ? "" : "s"} received`,
+            "booking",
+            "/bookings?filter=Pending",
+            { filter: "Pending" }
+          );
+        }
+        if (fresh.length > 0 && showToast) {
+          set({ newBadge: fresh.length });
+          showToast(
+            fresh.length === 1
+              ? `New booking from ${fresh[0].Name || "customer"}`
+              : `${fresh.length} new bookings received!`
+          );
+        }
+      } else if (prevPending !== null && pendingNow > prevPending && showToast) {
+        // Fallback for first poll after hard refresh without known IDs mid-session
         const diff = pendingNow - prevPending;
         set({ newBadge: diff });
         showToast(`${diff} new booking${diff > 1 ? "s" : ""} received!`);
@@ -156,14 +193,12 @@ export const useStore = create(devtools((set, get) => ({
           "New Booking",
           `${diff} new pending booking${diff > 1 ? "s" : ""} received`,
           "booking",
-          "/bookings"
+          "/bookings?filter=Pending",
+          { filter: "Pending" }
         );
-        if ("Notification" in window && Notification.permission === "granted") {
-          new Notification("Slippy Goalz Arena — New Booking", {
-            body: `${diff} new pending booking${diff > 1 ? "s" : ""}`,
-          });
-        }
       }
+
+      knownBookingIds = idsNow;
       prevPending = pendingNow;
 
       set({
