@@ -1369,11 +1369,7 @@ export default function Bookings() {
       setStatusLoadingId(bookingId);
       try {
         await updateBookingStatus(bookingId, apiStatus);
-        if (displayStatus === "Reschedule") {
-          showToast("Booking marked for reschedule");
-        } else {
-          showToast(`Status updated to ${displayStatus}`);
-        }
+        showToast(`Status updated to ${displayStatus || apiStatus}`);
       } catch (err) {
         console.error(err);
         showToast(err?.message || "Failed to update status", "error");
@@ -1860,7 +1856,7 @@ export default function Bookings() {
         }}
       >
         <SegmentedControl
-          options={["All", "Pending", "Confirmed", "Completed", "Rejected"]}
+          options={["All", "Pending", "Confirmed", "Reschedule", "Completed", "Rejected"]}
           value={filter}
           onChange={(v) => {
             setFilter(v);

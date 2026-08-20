@@ -40,6 +40,13 @@ export const STATUS_COLORS = {
     dot: "#E11D48",
     shadow: "none",
   },
+  Reschedule: {
+    bg: "#EEF2FF",
+    color: "#4338CA",
+    border: "#C7D2FE",
+    dot: "#6366F1",
+    shadow: "none",
+  },
   "Repeat customer": {
     bg: "#F1F3F5",
     color: "#3F4450",

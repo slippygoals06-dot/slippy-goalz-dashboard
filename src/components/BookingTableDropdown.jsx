@@ -36,7 +36,7 @@ export const BOOKING_STATUS_OPTIONS = [
   { value: "Cancelled", label: "Cancelled" },
   { value: "Rejected", label: "Rejected" },
   { value: "Completed", label: "Completed" },
-  { value: "Reschedule", label: "Reschedule", apiValue: "Pending" },
+  { value: "Reschedule", label: "Reschedule" },
 ];
 
 const STATUS_SEMANTIC = {

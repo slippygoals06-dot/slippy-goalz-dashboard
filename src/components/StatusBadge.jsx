@@ -46,6 +46,13 @@ const SOFT = {
     dot: "#E11D48",
     icon: "x",
   },
+  Reschedule: {
+    bg: "#EEF2FF",
+    color: "#4338CA",
+    ring: "#C7D2FE",
+    dot: "#6366F1",
+    icon: "dot",
+  },
   Unpaid: {
     bg: "#FFFBEB",
     color: "#B45309",
@@ -147,6 +154,13 @@ const DARK_SOFT = {
     dot: "#F43F5E",
     icon: "x",
   },
+  Reschedule: {
+    bg: "rgba(99,102,241,0.14)",
+    color: "#A5B4FC",
+    ring: "rgba(99,102,241,0.28)",
+    dot: "#818CF8",
+    icon: "dot",
+  },
   Unpaid: {
     bg: "rgba(245,158,11,0.12)",
     color: "#FBBF24",
@@ -216,6 +230,7 @@ function resolveSoft(status, dark) {
   if (lower === "completed") return map.Completed;
   if (lower === "pending") return map.Pending;
   if (lower === "confirmed") return map.Confirmed;
+  if (lower === "reschedule" || lower === "rescheduled") return map.Reschedule;
   if (lower === "rejected" || lower === "cancelled") return map.Rejected;
   const raw =
     STATUS_COLORS[status] ||
