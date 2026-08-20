@@ -1856,7 +1856,7 @@ export default function Bookings() {
         }}
       >
         <SegmentedControl
-          options={["All", "Pending", "Confirmed", "Reschedule", "Completed", "Rejected"]}
+          options={["All", "Pending", "Confirmed", "Reschedule", "Cancelled", "Completed", "Rejected"]}
           value={filter}
           onChange={(v) => {
             setFilter(v);
