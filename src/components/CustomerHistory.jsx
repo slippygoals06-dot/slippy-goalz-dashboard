@@ -39,7 +39,11 @@ export default function CustomerHistory({ customer, bookings, invoices = [], onC
   const totalSpent = history.filter(b => b.Status === "Confirmed").reduce((s,b) => s+(SERVICE_PRICES[b.Service]||0), 0);
   const firstVisit = history.length ? history[history.length-1].Date : "—";
   const lastVisit  = history.length ? history[0].Date : "—";
-  const tier = getCustomerTier(customer.Phone, bookings, invoices);
+  const tier = getCustomerTier(
+    { phone: customer.Phone, customer_id: customer.customer_id },
+    bookings,
+    invoices
+  );
 
   return createPortal(
     <div

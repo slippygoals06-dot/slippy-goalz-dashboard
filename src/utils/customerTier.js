@@ -5,33 +5,53 @@ const VIP_PAID_THRESHOLD = 15000;
 const AT_RISK_DAYS = 60;
 
 /**
- * Compute automatic customer tier from bookings + invoices.
- * Priority: VIP > At risk > Loyal > Returning > New
- * Returns null if phone has no countable bookings.
+ * Resolve identity: phone string, or { phone, customerId / customer_id }.
  */
-export function getCustomerTier(phone, bookings = [], invoices = []) {
-  if (!phone) return null;
+function resolveIdentity(identity) {
+  if (identity == null) return { phone: null, customerId: null };
+  if (typeof identity === "string") return { phone: identity, customerId: null };
+  return {
+    phone: identity.phone || identity.Phone || null,
+    customerId: identity.customerId || identity.customer_id || null,
+  };
+}
+
+function belongsToCustomer(b, phone, customerId) {
+  if (customerId && b.customer_id) {
+    return String(b.customer_id) === String(customerId);
+  }
+  return phonesMatch(b.Phone, phone);
+}
+
+/**
+ * Compute automatic customer tier from bookings + invoices.
+ * Prefer permanent customer_id when present; fall back to phonesMatch.
+ * Priority: VIP > At risk > Loyal > Returning > New
+ * Returns null if no countable bookings.
+ */
+export function getCustomerTier(identity, bookings = [], invoices = []) {
+  const { phone, customerId } = resolveIdentity(identity);
+  if (!phone && !customerId) return null;
 
   const countable = (bookings || []).filter(
     (b) =>
-      phonesMatch(b.Phone, phone) &&
+      belongsToCustomer(b, phone, customerId) &&
       !EXCLUDED_STATUSES.has(b.Status)
   );
 
   const count = countable.length;
   if (count === 0) return null;
 
-  // Lifetime paid: invoices.status === "paid", matched by phone or booking_id
   const customerBookingIds = new Set(
     (bookings || [])
-      .filter((b) => phonesMatch(b.Phone, phone) && b["Booking ID"])
+      .filter((b) => belongsToCustomer(b, phone, customerId) && b["Booking ID"])
       .map((b) => b["Booking ID"])
   );
 
   let paidTotal = 0;
   for (const inv of invoices || []) {
     if (inv.status !== "paid") continue;
-    const byPhone = inv.phone && phonesMatch(inv.phone, phone);
+    const byPhone = phone && inv.phone && phonesMatch(inv.phone, phone);
     const byBooking = inv.booking_id && customerBookingIds.has(inv.booking_id);
     if (byPhone || byBooking) {
       paidTotal += Number(inv.amount) || 0;
@@ -55,4 +75,13 @@ export function getCustomerTier(phone, bookings = [], invoices = []) {
   if (count >= 3) return "Loyal";
   if (count === 2) return "Returning";
   return "New";
+}
+
+/** Stable map key for VIP / tier caches — prefer customer_id. */
+export function customerIdentityKey(bookingOrPhone) {
+  if (!bookingOrPhone) return "";
+  if (typeof bookingOrPhone === "string") return `p:${bookingOrPhone}`;
+  if (bookingOrPhone.customer_id) return `c:${bookingOrPhone.customer_id}`;
+  const phone = bookingOrPhone.Phone || bookingOrPhone.phone || "";
+  return phone ? `p:${phone}` : "";
 }

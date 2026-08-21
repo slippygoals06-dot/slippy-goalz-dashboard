@@ -744,7 +744,13 @@ function BookingDrawer({
     setNotes(booking?.Notes || "");
   }, [booking?.["Booking ID"], booking?.Notes, booking?.amount]);
 
-  const tier = booking ? getCustomerTier(booking.Phone, bookings, invoices) : null;
+  const tier = booking
+    ? getCustomerTier(
+        { phone: booking.Phone, customer_id: booking.customer_id },
+        bookings,
+        invoices
+      )
+    : null;
 
   const suggestions = useMemo(() => {
     if (!booking) return [];
@@ -1504,11 +1510,19 @@ export default function Bookings() {
       .filter((b) => b.Status === "Completed" || b.Status === "Confirmed")
       .reduce((sum, b) => sum + bookingRevenue(b), 0);
 
-    const vipPhones = new Set();
+    const vipKeys = new Set();
     for (const b of bookings) {
-      const key = phoneKey(b.Phone);
-      if (!key || vipPhones.has(key)) continue;
-      if (getCustomerTier(b.Phone, bookings, invoices) === "VIP") vipPhones.add(key);
+      const key = b.customer_id ? `c:${b.customer_id}` : phoneKey(b.Phone);
+      if (!key || vipKeys.has(key)) continue;
+      if (
+        getCustomerTier(
+          { phone: b.Phone, customer_id: b.customer_id },
+          bookings,
+          invoices
+        ) === "VIP"
+      ) {
+        vipKeys.add(key);
+      }
     }
 
     return {
@@ -1516,7 +1530,7 @@ export default function Bookings() {
       completed: todayCompleted,
       pending: todayPending,
       revenue,
-      vip: vipPhones.size,
+      vip: vipKeys.size,
       allPending: bookings.filter((b) => b.Status === "Pending").length,
     };
   }, [bookings, invoices]);
@@ -1526,7 +1540,14 @@ export default function Bookings() {
     for (const b of bookings) {
       const key = phoneKey(b.Phone);
       if (!key || map.has(key)) continue;
-      map.set(key, getCustomerTier(b.Phone, bookings, invoices));
+      map.set(
+        key,
+        getCustomerTier(
+          { phone: b.Phone, customer_id: b.customer_id },
+          bookings,
+          invoices
+        )
+      );
     }
     return map;
   }, [bookings, invoices]);

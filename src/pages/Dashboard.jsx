@@ -20,6 +20,7 @@ import { premiumCardStyle } from "../components/StatCard";
 import StatusBadge from "../components/StatusBadge";
 import SegmentedControl from "../components/SegmentedControl";
 import AiBriefing from "../components/AiBriefing";
+import TonightBoard from "../components/TonightBoard";
 import Sheet from "../components/Sheet";
 import { DashboardSkeleton, ContentReveal } from "../components/Skeleton";
 import { exportToCSV } from "../utils/export";
@@ -773,6 +774,11 @@ export default function Dashboard() {
 
       {/* ── AI Briefing ──────────────────────────────────────────────────── */}
       <AiBriefing range={range} />
+
+      {/* ── Tonight board (ops at a glance) ─────────────────────────────── */}
+      <div style={{ marginBottom: 16 }}>
+        <TonightBoard bookings={bookings} invoices={invoices} t={t} />
+      </div>
 
       {/* ── Primary KPIs ─────────────────────────────────────────────────── */}
       <div
