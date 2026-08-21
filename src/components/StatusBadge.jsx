@@ -60,6 +60,13 @@ const SOFT = {
     dot: "#EA580C",
     icon: "x",
   },
+  "Weekly package": {
+    bg: "#EEF2FF",
+    color: "#4338CA",
+    ring: "#C7D2FE",
+    dot: "#6366F1",
+    icon: "dot",
+  },
   Unpaid: {
     bg: "#FFFBEB",
     color: "#B45309",
