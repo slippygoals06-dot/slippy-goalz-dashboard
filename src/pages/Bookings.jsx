@@ -35,6 +35,7 @@ import PageShell from "../components/PageShell";
 import Sheet from "../components/Sheet";
 import CustomerHistory from "../components/CustomerHistory";
 import ConversationHistory from "../components/ConversationHistory";
+import CreateWeeklyPackageModal from "../components/CreateWeeklyPackageModal";
 import { exportToCSV } from "../utils/export";
 import { formatDate, formatPhone, whatsappLink, phoneKey, getInitials } from "../utils/format";
 import { isStalePending } from "../utils/sla";
@@ -991,6 +992,7 @@ function BookingDrawer({
         <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 20 }}>
           <StatusBadge status={booking.Status} pulse={booking.Status === "Pending"} />
           {tier && <StatusBadge status={tier} />}
+          {booking.package_id && <StatusBadge status="Weekly package" />}
           {booking.Source && <StatusBadge status={booking.Source} />}
           <StatusBadge status={booking["Payment Status"] || "Unpaid"} />
         </div>
@@ -1470,6 +1472,7 @@ export default function Bookings() {
   const [selected, setSelected] = useState(null);
   const [customer, setCustomer] = useState(null);
   const [addOpen, setAddOpen] = useState(false);
+  const [packageOpen, setPackageOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [focusedRow, setFocusedRow] = useState(-1);
@@ -1804,6 +1807,25 @@ export default function Bookings() {
           <button
             type="button"
             className="ui-press"
+            onClick={() => setPackageOpen(true)}
+            style={{
+              ...secondaryBtnStyle(t),
+              padding: "0 16px",
+              height: 40,
+              fontSize: 13,
+              whiteSpace: "nowrap",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              fontFamily: "inherit",
+            }}
+          >
+            <Calendar size={15} strokeWidth={2} />
+            Weekly package
+          </button>
+          <button
+            type="button"
+            className="ui-press"
             onClick={() => setAddOpen(true)}
             {...primaryBtnHoverProps(t)}
             style={{
@@ -1927,6 +1949,7 @@ export default function Bookings() {
         onDepositSaved={handleDepositSaved}
       />
       <AddBookingModal open={addOpen} onClose={() => setAddOpen(false)} />
+      <CreateWeeklyPackageModal open={packageOpen} onClose={() => setPackageOpen(false)} />
       <CustomerHistory customer={customer} bookings={bookings} invoices={invoices} onClose={() => setCustomer(null)} />
 
       {/* Today's summary */}

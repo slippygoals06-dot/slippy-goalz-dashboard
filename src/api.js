@@ -58,6 +58,13 @@ export const getCustomer = (id) =>
 export const getCustomerBookings = (id) =>
   apiFetch(`/customers/${encodeURIComponent(id)}/bookings`);
 
+// Weekly packages / leagues
+export const getPackages = () => apiFetch("/packages/");
+export const getPackage = (id) =>
+  apiFetch(`/packages/${encodeURIComponent(id)}`);
+export const createWeeklyPackage = (data) =>
+  apiFetch("/packages/", { method: "POST", body: JSON.stringify(data) });
+
 // Slots
 export const getSlots = () => apiFetch("/slots/");
 export const createSlot = (data) =>
