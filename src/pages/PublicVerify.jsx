@@ -269,7 +269,7 @@ export default function PublicVerify() {
             }}
           >
             We couldn’t find a parts record for this code. If you scanned a QR
-            from a repair, please contact the shop for help.
+            from a booking, please contact the arena for help.
           </p>
           {batchNumber && (
             <div
@@ -550,7 +550,7 @@ export default function PublicVerify() {
                               wordBreak: "break-all",
                             }}
                           >
-                            Repair {event.repair_id}
+                            Booking {event.repair_id}
                           </span>
                         )}
                       </div>

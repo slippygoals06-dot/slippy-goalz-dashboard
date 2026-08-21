@@ -6,7 +6,7 @@ import { useTheme, primaryBtnStyle, primaryBtnHoverProps, secondaryBtnStyle } fr
 import { duration as motionMs, tween } from "../design-system/motion";
 import { useStore } from "../store/useStore";
 import { inRange, formatDate } from "../utils/format";
-import { SERVICE_PRICES } from "../constants";
+import { bookingRevenue } from "../utils/bookingRevenue";
 import { isStalePending } from "../utils/sla";
 
 function todayBounds() {
@@ -157,10 +157,7 @@ export default function AiBriefing({ range = "This Week" }) {
 
     const revenue = week
       .filter((b) => b.Status === "Confirmed" || b.Status === "Completed")
-      .reduce((s, b) => {
-        if (b.amount != null && b.amount !== "") return s + (Number(b.amount) || 0);
-        return s + (SERVICE_PRICES[b.Service] || 0);
-      }, 0);
+      .reduce((s, b) => s + bookingRevenue(b), 0);
 
     const rescheduleCount = bookings.filter((b) => b.Status === "Reschedule").length;
     if (rescheduleCount > 0) {

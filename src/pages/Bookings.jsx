@@ -44,7 +44,7 @@ import { isUnpaidAging } from "../utils/unpaidAging";
 import { BookingStatusDropdown, BookingPaymentDropdown, closeAllTableDropdowns, useCloseWhenTableDropdownOpens } from "../components/BookingTableDropdown";
 import { usePaymentStatus } from "../hooks/usePaymentStatus";
 import { completeBookingWithInvoice, updateBooking } from "../api";
-import { SERVICE_PRICES } from "../constants";
+import { bookingRevenue } from "../utils/bookingRevenue";
 import { fromApiRow, PAYMENT_STATUSES, PAYMENT_STATUS_LABELS, PAYMENT_MODES } from "../utils/bookingFields";
 import BookingAttachments from "../components/BookingAttachments";
 
@@ -79,11 +79,6 @@ function isToday(dateStr) {
     d.getMonth() === now.getMonth() &&
     d.getDate() === now.getDate()
   );
-}
-
-function bookingRevenue(b) {
-  if (b.amount != null && b.amount !== "") return Number(b.amount) || 0;
-  return SERVICE_PRICES[b.Service] || 0;
 }
 
 const ADD_EMPTY = {

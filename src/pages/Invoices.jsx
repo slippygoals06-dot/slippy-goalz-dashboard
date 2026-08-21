@@ -597,11 +597,11 @@ function InvoiceDrawer({
         </div>
       </DrawerSection>
 
-      <DrawerSection title="Repair" t={t}>
+      <DrawerSection title="Booking" t={t}>
         <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
           {[
             ["Service", invoice.service],
-            ["Device", invoice.device],
+            ["Players / session", invoice.device],
             ["Booking", invoice.booking_id],
             ["Booking date", invoice.booking_date ? formatDate(invoice.booking_date) : null],
           ]
@@ -634,13 +634,13 @@ function InvoiceDrawer({
               </div>
             ))}
           {!invoice.service && !invoice.device && (
-            <div style={{ fontSize: 13, color: t.textMuted }}>No repair details attached</div>
+            <div style={{ fontSize: 13, color: t.textMuted }}>No booking details attached</div>
           )}
         </div>
       </DrawerSection>
 
       {relatedBookings.length > 0 && (
-        <DrawerSection title="Repair history" t={t}>
+        <DrawerSection title="Booking history" t={t}>
           <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
             {relatedBookings.map((b, i) => (
               <div
@@ -1319,7 +1319,7 @@ export default function Invoices() {
                 <tr>
                   <th style={TH}>Invoice</th>
                   <th style={TH}>Customer</th>
-                  <th style={TH}>Device</th>
+                  <th style={TH}>Players</th>
                   <th style={TH}>Service</th>
                   <th style={{ ...TH, textAlign: "right" }}>Amount</th>
                   <th style={TH}>Date</th>

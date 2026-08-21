@@ -36,7 +36,7 @@ export default function CustomerBot() {
   const [messages, setMessages] = useState([
     {
       role: "assistant",
-      content: `Hi! 👋 Welcome to ${BUSINESS_NAME}. I can help you book a repair appointment. What device do you need help with?`,
+      content: `Hi! 👋 Welcome to ${BUSINESS_NAME}. I can help you book a pitch. How many players, and which day works?`,
     },
   ]);
   const [input, setInput] = useState("");
@@ -131,10 +131,10 @@ export default function CustomerBot() {
             <BotMark size={34} />
             <div>
               <p className="text-white font-semibold text-sm">
-                We <span style={{ color: BRAND_RED }}>F</span>ix Assistant
+                Slippy Goalz Assistant
               </p>
               <p className="text-xs" style={{ color: "rgba(255,255,255,0.55)" }}>
-                Online — book your repair
+                Online — book your pitch
               </p>
             </div>
           </div>

@@ -29,7 +29,7 @@ import Sheet from "../components/Sheet";
 import EmptyState from "../components/EmptyState";
 import { SkeletonBlock } from "../components/Skeleton";
 import { exportToCSV } from "../utils/export";
-import { SERVICE_PRICES } from "../constants";
+import { bookingRevenue } from "../utils/bookingRevenue";
 import { spacing, radius, duration, ease } from "../design-system/tokens";
 
 /* ── Constants ───────────────────────────────────────────────────────────── */
@@ -167,10 +167,6 @@ function formatCompact(n) {
   if (v >= 100000) return `${(v / 100000).toFixed(1)}L`;
   if (v >= 1000) return `${(v / 1000).toFixed(v >= 10000 ? 0 : 1)}k`;
   return String(v);
-}
-
-function bookingRevenue(b) {
-  return SERVICE_PRICES[b.Service] || 0;
 }
 
 function sparkFromSeries(series, key = "value") {
@@ -522,7 +518,7 @@ function DrawerSection({ title, children, t }) {
 
 function AnalyticsSkeleton({ t }) {
   return (
-    <PageShell title="Analytics" subtitle="Understand the performance of your repair business.">
+    <PageShell title="Analytics" subtitle="Understand the performance of your arena.">
       <style>{`
         .sk-wave{position:relative;overflow:hidden;background:${t.name === "dark" ? "rgba(255,255,255,0.04)" : "rgba(15,17,21,0.04)"};border:1px solid ${t.border}}
         .sk-wave::after{content:"";position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(90deg,transparent,${t.name === "dark" ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.7)"},transparent);animation:skWave 1.4s ease-in-out infinite}
@@ -681,8 +677,10 @@ export default function Analytics() {
       .map(([name, count]) => ({
         name,
         count,
-        revenue: (SERVICE_PRICES[name] || 0) * confirmed.filter((b) => b.Service === name).length,
-        avgTime: name === "Software Fix" ? 45 : name === "Battery Replacement" ? 60 : name === "Screen Repair" ? 90 : 120,
+        revenue: confirmed
+          .filter((b) => b.Service === name)
+          .reduce((s, b) => s + bookingRevenue(b), 0),
+        avgTime: 60,
       }));
 
     const topService = services[0];
@@ -882,7 +880,7 @@ export default function Analytics() {
     const marketingOpp =
       bestSource && bestSource.source !== "Unknown"
         ? `Double down on ${bestSource.source} — your top booking channel.`
-        : "Promote your highest-margin repair this week.";
+        : "Promote your busiest session window this week.";
     const churnRisk =
       retention < 25 && uniqueCustomers > 5
         ? "Elevated — follow up with one-time customers."
@@ -907,10 +905,10 @@ export default function Analytics() {
       services:
         topRevenueService
           ? `${topRevenueService.name} leads revenue with ${formatRs(topRevenueService.revenue)}.`
-          : "Service mix insights appear after confirmed repairs.",
+          : "Service mix insights appear after confirmed bookings.",
       customers:
         retention > 0
-          ? `${retention}% of customers returned for another repair.`
+          ? `${retention}% of customers returned for another booking.`
           : "Repeat patterns emerge as the same phones book again.",
       ops:
         utilised > 0
@@ -1064,19 +1062,19 @@ export default function Analytics() {
         ],
       },
       ticket: {
-        title: "Average Repair Value",
+        title: "Average Booking Value",
         subtitle: analytics.deltaLabel,
         value: formatRs(analytics.avgTicket),
         trend: analytics.avgDelta,
         breakdown: analytics.services.slice(0, 5).map((s) => ({
           label: s.name,
-          value: formatRs(SERVICE_PRICES[s.name] || 0),
+          value: formatRs(s.count ? Math.round(s.revenue / s.count) : 0),
         })),
         series: analytics.revenueSeries.map((r) => ({ label: r.label, value: r.avg })),
         ai: analytics.highestSpendSource
           ? `${analytics.highestSpendSource.source} brings the highest average tickets.`
-          : "Average ticket reflects your confirmed service mix.",
-        recommendations: ["Bundle accessories on high-ticket repairs.", "Surface premium repair options in chat."],
+          : "Average ticket reflects your confirmed booking mix.",
+        recommendations: ["Upsell weekly packages on high-demand slots.", "Offer deposit holds for peak evening games."],
         related: [
           { label: "Revenue", value: formatRs(analytics.revenue) },
           { label: "Top service", value: analytics.topRevenueService?.name || "—" },
@@ -1094,7 +1092,7 @@ export default function Analytics() {
         ],
         series: [],
         ai: analytics.insights.customers,
-        recommendations: ["Send a warranty check-in to recent screen repairs.", "Offer priority slots to VIP phones."],
+        recommendations: ["Send a rebook nudge after no-shows clear.", "Offer priority slots to VIP captains."],
         related: [
           { label: "Retention", value: `${analytics.retention}%` },
           { label: "Unique", value: analytics.uniqueCustomers },
@@ -1194,7 +1192,7 @@ export default function Analytics() {
 
   if (empty) {
     return (
-      <PageShell title="Analytics" subtitle="Understand the performance of your repair business." actions={headerActions}>
+      <PageShell title="Analytics" subtitle="Understand the performance of your arena." actions={headerActions}>
         <EmptyState
           illustration="default"
           title="Reports will appear as you get more bookings."
@@ -1205,7 +1203,7 @@ export default function Analytics() {
   }
 
   return (
-    <PageShell title="Analytics" subtitle="Understand the performance of your repair business." actions={headerActions} wide>
+    <PageShell title="Analytics" subtitle="Understand the performance of your arena." actions={headerActions} wide>
       <style>{`
         .an-exec { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
         .an-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
@@ -1788,18 +1786,18 @@ export default function Analytics() {
       <>
       {/* Service Analytics */}
       <section className="an-section">
-        <SectionHeader title="Service Analytics" subtitle="Which repairs carry the business." t={t} />
+        <SectionHeader title="Service Analytics" subtitle="Which sessions carry the business." t={t} />
         <div className="an-3col" style={{ marginBottom: 16 }}>
           <MetricTile label="Most popular" value={analytics.topService?.name || "—"} sub={analytics.topService ? `${analytics.topService.count} bookings` : undefined} t={t} />
           <MetricTile label="Highest revenue" value={analytics.topRevenueService?.name || "—"} sub={analytics.topRevenueService ? formatRs(analytics.topRevenueService.revenue) : undefined} t={t} />
-          <MetricTile label="Avg. repair time" value={analytics.avgRepairTime ? `${analytics.avgRepairTime}m` : "—"} sub="Estimated bench time" t={t} />
+          <MetricTile label="Avg. session time" value={analytics.avgRepairTime ? `${analytics.avgRepairTime}m` : "—"} sub="Typical pitch block" t={t} />
         </div>
         <div className="an-2col">
           <Panel t={t}>
             <div style={{ fontSize: 15, fontWeight: 550, color: t.textPrimary, marginBottom: 20 }}>Repair profile</div>
             {[
-              { label: "Fastest repair", value: analytics.fastest?.name || "—", sub: analytics.fastest ? `~${analytics.fastest.avgTime} min` : "" },
-              { label: "Longest repair", value: analytics.longest?.name || "—", sub: analytics.longest ? `~${analytics.longest.avgTime} min` : "" },
+              { label: "Fastest session", value: analytics.fastest?.name || "—", sub: analytics.fastest ? `~${analytics.fastest.avgTime} min` : "" },
+              { label: "Longest session", value: analytics.longest?.name || "—", sub: analytics.longest ? `~${analytics.longest.avgTime} min` : "" },
               { label: "Warranty claims", value: String(analytics.warrantyClaims), sub: "Estimated from confirmed volume" },
             ].map((row) => (
               <div key={row.label} style={{ padding: "14px 0", borderBottom: `1px solid ${t.borderSub || t.border}` }}>

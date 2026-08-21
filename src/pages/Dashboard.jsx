@@ -26,7 +26,8 @@ import { DashboardSkeleton, ContentReveal } from "../components/Skeleton";
 import { exportToCSV } from "../utils/export";
 import { formatDate, inRange } from "../utils/format";
 import { isStalePending } from "../utils/sla";
-import { DATE_RANGES, SERVICE_PRICES } from "../constants";
+import { DATE_RANGES } from "../constants";
+import { bookingRevenue } from "../utils/bookingRevenue";
 import { getInvoices } from "../api";
 import {
   Copy,
@@ -546,8 +547,8 @@ export default function Dashboard() {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
   const estRevenue = filtered
-    .filter((b) => b.Status === "Confirmed")
-    .reduce((s, b) => s + (SERVICE_PRICES[b.Service] || 0), 0);
+    .filter((b) => b.Status === "Confirmed" || b.Status === "Completed")
+    .reduce((s, b) => s + bookingRevenue(b), 0);
   const gridStroke = t.name === "dark" ? GRID_DARK : GRID;
 
   const shopStatus =
@@ -1343,7 +1344,7 @@ export default function Dashboard() {
             {(selectedBooking.Device || selectedBooking.device) && (
               <div>
                 <div style={{ fontSize: 11, fontWeight: 500, color: t.textMuted, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>
-                  Device
+                  Players
                 </div>
                 <div style={{ fontSize: 14, color: t.textPrimary }}>{selectedBooking.Device || selectedBooking.device}</div>
               </div>

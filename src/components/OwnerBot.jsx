@@ -17,17 +17,9 @@ export default function OwnerBot() {
   const slots = useStore((s) => s.slots || []);
   const leads = useStore((s) => s.leads || []);
 
-  const SERVICE_PRICES = {
-    "Screen Repair": 5000,
-    "Battery Replacement": 2500,
-    "Software Fix": 1500,
-    "Water Damage": 8000,
-    "Charging Port": 3000,
-    "Camera Repair": 4000,
-  };
   const revenue = bookings
-    .filter((b) => b.Status === "Confirmed")
-    .reduce((s, b) => s + (SERVICE_PRICES[b.Service] || 0), 0);
+    .filter((b) => b.Status === "Confirmed" || b.Status === "Completed")
+    .reduce((s, b) => s + (Number(b.amount) || 0), 0);
 
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState([

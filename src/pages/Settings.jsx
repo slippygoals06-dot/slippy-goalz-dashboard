@@ -585,7 +585,7 @@ export default function Settings() {
   const [shop, setShop] = useState({
     name: BUSINESS_NAME,
     phone: "+92 300 0000000",
-    email: "owner@ultimatephonerepair.com",
+    email: "owner@slippygoalz.com",
     address: "Lahore, Pakistan",
     city: "Lahore",
     hours: "10:00 AM – 8:00 PM",

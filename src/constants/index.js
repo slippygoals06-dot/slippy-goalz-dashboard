@@ -200,12 +200,7 @@ export const PAYMENT_COLORS = {
 };
 
 export const SERVICE_PRICES = {
-  "Screen Repair":       5000,
-  "Battery Replacement": 2500,
-  "Software Fix":        1500,
-  "Water Damage":        8000,
-  "Charging Port":       3000,
-  "Camera Repair":       4000,
+  "Pitch booking": 4000,
 };
 
 export const NAV_ITEMS = [

@@ -797,7 +797,7 @@ export default function Chats() {
     if (metrics.bookedToday > 0) {
       lines.push({
         tone: "ok",
-        plain: `AI successfully booked ${metrics.bookedToday} repair${metrics.bookedToday === 1 ? "" : "s"} today.`,
+        plain: `AI successfully booked ${metrics.bookedToday} pitch${metrics.bookedToday === 1 ? "" : "es"} today.`,
       });
     }
     const needs = enriched.filter((s) => s.needsHuman).length;
@@ -1856,7 +1856,7 @@ export default function Chats() {
                     <MetaLine label="Repair issue" value={selected.collected?.issue} t={t} />
                     <MetaLine label="Phone" value={formatPhone(selected.collected?.phone)} t={t} />
                     <MetaLine
-                      label="Previous repairs"
+                      label="Previous bookings"
                       value={
                         selected.relatedBookings.length
                           ? `${selected.relatedBookings.length} booking${selected.relatedBookings.length === 1 ? "" : "s"}`
