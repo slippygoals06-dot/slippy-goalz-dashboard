@@ -38,6 +38,7 @@ export default function CreateWeeklyPackageModal({ open, onClose }) {
   }
 
   async function handleSave() {
+    if (saving) return;
     const missing = [];
     if (!form.name?.trim()) missing.push("name");
     if (!form.phone?.trim()) missing.push("phone");

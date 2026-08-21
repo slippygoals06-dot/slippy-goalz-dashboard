@@ -41,6 +41,7 @@ import { formatDate, formatPhone, whatsappLink, phoneKey, getInitials } from "..
 import { isStalePending } from "../utils/sla";
 import { getCustomerTier } from "../utils/customerTier";
 import { isUnpaidAging } from "../utils/unpaidAging";
+import { idempotencyKeyForIntent } from "../utils/idempotency";
 import { BookingStatusDropdown, BookingPaymentDropdown, closeAllTableDropdowns, useCloseWhenTableDropdownOpens } from "../components/BookingTableDropdown";
 import { usePaymentStatus } from "../hooks/usePaymentStatus";
 import { completeBookingWithInvoice, updateBooking } from "../api";
@@ -198,12 +199,16 @@ function AddBookingModal({ open, onClose, onSaved }) {
   const [form, setForm] = useState(ADD_EMPTY);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const idemIntentRef = useRef({ fingerprint: "", key: "" });
+  const savingLockRef = useRef(false);
 
   useEffect(() => {
     if (!open) return;
     setForm(ADD_EMPTY);
     setError("");
     setSaving(false);
+    savingLockRef.current = false;
+    idemIntentRef.current = { fingerprint: "", key: "" };
   }, [open]);
 
   function handleChange(field, value) {
@@ -211,6 +216,7 @@ function AddBookingModal({ open, onClose, onSaved }) {
   }
 
   async function handleSave() {
+    if (savingLockRef.current) return;
     const missing = [];
     if (!form.name?.trim()) missing.push("name");
     if (!form.phone?.trim()) missing.push("phone");
@@ -222,16 +228,22 @@ function AddBookingModal({ open, onClose, onSaved }) {
       setError(`Please fill in: ${missing.join(", ")}`);
       return;
     }
+    savingLockRef.current = true;
     setSaving(true);
     setError("");
     try {
-      await addBooking({ ...form });
+      const key = idempotencyKeyForIntent(
+        `${String(form.phone).trim()}|${form.date}|${form.time}`,
+        idemIntentRef
+      );
+      await addBooking({ ...form, _idempotencyKey: key });
       showToast("Booking added");
       onSaved?.();
       onClose?.();
     } catch (err) {
       setError(err.message || "Failed to add booking");
     } finally {
+      savingLockRef.current = false;
       setSaving(false);
     }
   }

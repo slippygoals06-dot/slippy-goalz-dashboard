@@ -45,8 +45,12 @@ export async function login(username, password) {
 export const getBookings = () => apiFetch("/bookings/");
 export const getBookingHistory = (bookingId) =>
   apiFetch(`/bookings/${encodeURIComponent(bookingId)}/history`);
-export const createBooking = (booking) =>
-  apiFetch("/bookings/", { method: "POST", body: JSON.stringify(booking) });
+export const createBooking = (booking, { idempotencyKey } = {}) =>
+  apiFetch("/bookings/", {
+    method: "POST",
+    body: JSON.stringify(booking),
+    headers: idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {},
+  });
 export const updateBooking = (id, data) =>
   apiFetch(`/bookings/${id}`, { method: "PUT", body: JSON.stringify(data) });
 export const deleteBooking = (id) =>

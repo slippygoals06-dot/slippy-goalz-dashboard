@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { useNotifStore } from "./useNotifStore";
 import { devtools } from "zustand/middleware";
 import { toApiPayload } from "../utils/bookingFields";
+import { newIdempotencyKey } from "../utils/idempotency";
 import { API_URL as API } from "../config";
 
 let fetchingRef = false;
@@ -295,8 +296,12 @@ export const useStore = create(devtools((set, get) => ({
             status: booking.status || "Confirmed",
             source: booking.source,
           });
+      const idemKey =
+        booking._idempotencyKey ||
+        newIdempotencyKey();
       const saved = await apiCall("/bookings", {
         method: "POST",
+        headers: { "Idempotency-Key": idemKey },
         body: JSON.stringify(payload),
       });
       const row = {
@@ -310,8 +315,10 @@ export const useStore = create(devtools((set, get) => ({
         "Time":           payload.time,
         "Payment Status": payload.payment_status || "Unpaid",
         "Notes":          payload.notes || "",
-        "Status":         payload.status || "Confirmed",
+        "Status":         saved?.Status || payload.status || "Confirmed",
         "Source":         payload.source || saved?.Source || "",
+        amount:           saved?.amount ?? payload.amount,
+        customer_id:      saved?.customer_id,
       };
       set(state => ({ bookings: [row, ...state.bookings] }));
       return saved;

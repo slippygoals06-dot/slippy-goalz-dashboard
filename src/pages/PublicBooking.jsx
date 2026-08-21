@@ -13,6 +13,7 @@ import { API_URL as API } from "../config";
 import { supabase } from "../lib/supabase";
 import imageCompression from "browser-image-compression";
 import { Upload, X as XIcon, Loader2 } from "lucide-react";
+import { idempotencyKeyForIntent } from "../utils/idempotency";
 
 function formatDateLabel(iso) {
   if (!iso) return "";
@@ -75,11 +76,8 @@ export default function PublicBooking() {
   const [done, setDone] = useState(false);
   const [selectedImages, setSelectedImages] = useState([]);
   const imgInputRef = useRef(null);
-  const idempotencyKeyRef = useRef(
-    typeof crypto !== "undefined" && crypto.randomUUID
-      ? crypto.randomUUID()
-      : `pb-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
-  );
+  const idemIntentRef = useRef({ fingerprint: "", key: "" });
+  const submittingLockRef = useRef(false);
 
   useEffect(() => {
     async function loadSlots() {
@@ -229,6 +227,8 @@ export default function PublicBooking() {
   async function handleSubmit(e) {
     e?.preventDefault?.();
     if (!validate()) return;
+    if (submittingLockRef.current) return;
+    submittingLockRef.current = true;
     setSubmitting(true);
     setError("");
 
@@ -246,12 +246,17 @@ export default function PublicBooking() {
       source: "Public book",
     });
 
+    const idemKey = idempotencyKeyForIntent(
+      `${String(form.phone).trim()}|${form.date}|${form.time}`,
+      idemIntentRef
+    );
+
     try {
       const res = await fetch(`${API}/bookings/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Idempotency-Key": idempotencyKeyRef.current,
+          "Idempotency-Key": idemKey,
         },
         body: JSON.stringify(booking),
       });
@@ -274,6 +279,7 @@ export default function PublicBooking() {
     } catch (err) {
       setError(networkErrorMessage(err));
     } finally {
+      submittingLockRef.current = false;
       setSubmitting(false);
     }
   }
