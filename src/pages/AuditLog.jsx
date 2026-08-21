@@ -63,6 +63,12 @@ const ACTION_META = {
     status: "Warning",
     icon: CalendarX,
   },
+  no_show: {
+    label: "Marked No-show",
+    category: "Bookings",
+    status: "Warning",
+    icon: CalendarX,
+  },
   deleted: {
     label: "Record Deleted",
     category: "Bookings",
@@ -295,7 +301,8 @@ CREATE TABLE IF NOT EXISTS audit_events (
       'deleted',
       'payment_changed',
       'completed_invoiced',
-      'invoice_status_changed'
+      'invoice_status_changed',
+      'no_show'
     )),
   booking_id TEXT,
   invoice_id TEXT,

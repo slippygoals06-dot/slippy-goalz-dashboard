@@ -47,6 +47,13 @@ export const STATUS_COLORS = {
     dot: "#6366F1",
     shadow: "none",
   },
+  "No-show": {
+    bg: "#FFF7ED",
+    color: "#9A3412",
+    border: "#FED7AA",
+    dot: "#EA580C",
+    shadow: "none",
+  },
   "Repeat customer": {
     bg: "#F1F3F5",
     color: "#3F4450",

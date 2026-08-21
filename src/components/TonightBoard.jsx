@@ -33,7 +33,7 @@ export default function TonightBoard({ bookings = [], invoices = [], t }) {
   const board = useMemo(() => {
     const todays = (bookings || [])
       .filter((b) => String(b.Date || "").slice(0, 10) === today)
-      .filter((b) => !["Cancelled", "Rejected"].includes(b.Status))
+      .filter((b) => !["Cancelled", "Rejected", "No-show"].includes(b.Status))
       .slice()
       .sort(timeSort);
 
@@ -181,6 +181,11 @@ export default function TonightBoard({ bookings = [], invoices = [], t }) {
                   <div style={{ fontSize: 11, color: t.textMuted, marginTop: 2 }}>
                     {b.Phone || "—"}
                     {b.unpaid ? " · Unpaid" : ""}
+                    {b.deposit_paid
+                      ? " · Deposit paid"
+                      : b.deposit_amount
+                        ? " · Deposit due"
+                        : ""}
                   </div>
                 </div>
                 <StatusBadge status={b.Status || "Pending"} />

@@ -39,6 +39,7 @@ import { exportToCSV } from "../utils/export";
 import { formatDate, formatPhone, whatsappLink, phoneKey, getInitials } from "../utils/format";
 import { isStalePending } from "../utils/sla";
 import { getCustomerTier } from "../utils/customerTier";
+import { isUnpaidAging } from "../utils/unpaidAging";
 import { BookingStatusDropdown, BookingPaymentDropdown, closeAllTableDropdowns, useCloseWhenTableDropdownOpens } from "../components/BookingTableDropdown";
 import { usePaymentStatus } from "../hooks/usePaymentStatus";
 import { completeBookingWithInvoice, updateBooking } from "../api";
@@ -722,6 +723,7 @@ function BookingDrawer({
   onCompleted,
   onNotesSaved,
   onAmountSaved,
+  onDepositSaved,
 }) {
   const { theme: t } = useTheme();
   const { showToast } = useToast();
@@ -734,6 +736,9 @@ function BookingDrawer({
   const [savingNotes, setSavingNotes] = useState(false);
   const [priceDraft, setPriceDraft] = useState("");
   const [savingPrice, setSavingPrice] = useState(false);
+  const [depositDraft, setDepositDraft] = useState("");
+  const [depositPaidDraft, setDepositPaidDraft] = useState(false);
+  const [savingDeposit, setSavingDeposit] = useState(false);
   const { changeStatus, loadingId: paymentLoadingId } = usePaymentStatus();
 
   useEffect(() => {
@@ -741,8 +746,14 @@ function BookingDrawer({
     setCompleteOpen(false);
     setInvoiceAmount(booking?.amount != null && booking.amount !== "" ? String(booking.amount) : "");
     setPriceDraft(booking?.amount != null && booking.amount !== "" ? String(booking.amount) : "");
+    setDepositDraft(
+      booking?.deposit_amount != null && booking.deposit_amount !== ""
+        ? String(booking.deposit_amount)
+        : ""
+    );
+    setDepositPaidDraft(Boolean(booking?.deposit_paid));
     setNotes(booking?.Notes || "");
-  }, [booking?.["Booking ID"], booking?.Notes, booking?.amount]);
+  }, [booking?.["Booking ID"], booking?.Notes, booking?.amount, booking?.deposit_amount, booking?.deposit_paid]);
 
   const tier = booking
     ? getCustomerTier(
@@ -766,6 +777,16 @@ function BookingDrawer({
     }
     if (tier === "VIP") {
       list.push("VIP customer — prioritize scheduling and communication.");
+    }
+    if (booking.Status === "Confirmed" && !booking.deposit_paid) {
+      list.push("Take a deposit before peak hours to cut no-shows.");
+    }
+    if (booking.Status === "No-show") {
+      list.push(
+        booking.deposit_paid
+          ? "No-show with deposit on file — keep as forfeit or mark Refunded."
+          : "No-show with no deposit — follow up before rebooking this phone."
+      );
     }
     if (!booking.Notes) {
       list.push("Add internal notes about the booking or special requests.");
@@ -803,6 +824,32 @@ function BookingDrawer({
       showToast(err.message || "Failed to save price", "error");
     } finally {
       setSavingPrice(false);
+    }
+  }
+
+  async function handleSaveDeposit() {
+    const depositAmount =
+      depositDraft.trim() === "" ? null : Number(depositDraft);
+    if (depositDraft.trim() !== "" && (Number.isNaN(depositAmount) || depositAmount < 0)) {
+      showToast("Enter a valid deposit", "error");
+      return;
+    }
+    setSavingDeposit(true);
+    try {
+      await updateBooking(encodeURIComponent(booking["Booking ID"]), {
+        deposit_amount: depositAmount,
+        deposit_paid: depositPaidDraft,
+      });
+      onDepositSaved?.(booking["Booking ID"], {
+        deposit_amount: depositAmount,
+        deposit_paid: depositPaidDraft,
+      });
+      showToast("Deposit saved");
+    } catch (err) {
+      console.error(err);
+      showToast(err.message || "Failed to save deposit", "error");
+    } finally {
+      setSavingDeposit(false);
     }
   }
 
@@ -1080,7 +1127,65 @@ function BookingDrawer({
                   </div>
                 )}
               </div>
-              <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: t.textMuted, marginBottom: 8 }}>
+              <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: t.textMuted, marginBottom: 8, marginTop: 16 }}>
+                Deposit (Rs)
+              </label>
+              <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                <input
+                  type="number"
+                  min={0}
+                  step={1}
+                  inputMode="numeric"
+                  value={depositDraft}
+                  onChange={(e) => setDepositDraft(e.target.value)}
+                  placeholder="0"
+                  style={{
+                    flex: 1,
+                    minWidth: 120,
+                    height: 42,
+                    padding: "0 12px",
+                    borderRadius: 10,
+                    border: `1px solid ${t.border}`,
+                    background: t.cardBg2 || t.pageBg,
+                    color: t.textPrimary,
+                    fontSize: 14,
+                    fontFamily: "inherit",
+                  }}
+                />
+                <label
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 8,
+                    fontSize: 13,
+                    color: t.textSecondary,
+                    cursor: "pointer",
+                    userSelect: "none",
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={depositPaidDraft}
+                    onChange={(e) => setDepositPaidDraft(e.target.checked)}
+                  />
+                  Deposit paid
+                </label>
+                <button
+                  type="button"
+                  onClick={handleSaveDeposit}
+                  disabled={savingDeposit}
+                  style={{
+                    ...secondaryBtnStyle(t),
+                    height: 42,
+                    padding: "0 14px",
+                    opacity: savingDeposit ? 0.7 : 1,
+                  }}
+                >
+                  {savingDeposit ? "Saving…" : "Save deposit"}
+                </button>
+              </div>
+
+              <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: t.textMuted, marginBottom: 8, marginTop: 16 }}>
                 Price (Rs)
               </label>
               <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -1376,7 +1481,17 @@ export default function Bookings() {
   useEffect(() => {
     const openId = searchParams.get("open");
     const filterParam = searchParams.get("filter");
-    const allowed = new Set(["All", "Pending", "Confirmed", "Reschedule", "Cancelled", "Completed", "Rejected"]);
+    const allowed = new Set([
+      "All",
+      "Pending",
+      "Confirmed",
+      "Reschedule",
+      "No-show",
+      "Cancelled",
+      "Completed",
+      "Rejected",
+      "Unpaid aging",
+    ]);
     if (filterParam && allowed.has(filterParam)) {
       setFilter(filterParam);
     }
@@ -1455,6 +1570,17 @@ export default function Bookings() {
     );
   }
 
+  function handleDepositSaved(bookingId, deposit) {
+    useStore.setState((state) => ({
+      bookings: state.bookings.map((b) =>
+        b["Booking ID"] === bookingId ? { ...b, ...deposit } : b
+      ),
+    }));
+    setSelected((prev) =>
+      prev && prev["Booking ID"] === bookingId ? { ...prev, ...deposit } : prev
+    );
+  }
+
   const filtered = useMemo(() => {
     const s = search.toLowerCase();
     const list = bookings.filter((b) => {
@@ -1464,7 +1590,12 @@ export default function Bookings() {
         b.Phone?.toString().includes(s) ||
         b.Service?.toLowerCase().includes(s) ||
         b.Device?.toLowerCase().includes(s);
-      const matchFilter = filter === "All" || b.Status === filter;
+      const matchFilter =
+        filter === "All"
+          ? true
+          : filter === "Unpaid aging"
+            ? isUnpaidAging(b)
+            : b.Status === filter;
       return matchSearch && matchFilter;
     });
 
@@ -1478,7 +1609,10 @@ export default function Bookings() {
     })();
 
     const closed = (status) =>
-      status === "Completed" || status === "Cancelled" || status === "Rejected";
+      status === "Completed" ||
+      status === "Cancelled" ||
+      status === "Rejected" ||
+      status === "No-show";
 
     // Closed first, then closest date, then time
     return [...list].sort((a, b) => {
@@ -1553,6 +1687,7 @@ export default function Bookings() {
   }, [bookings, invoices]);
 
   const stalePendingCount = bookings.filter((b) => isStalePending(b)).length;
+  const unpaidAgingCount = bookings.filter((b) => isUnpaidAging(b)).length;
 
   const confirmBooking = useCallback(
     (id, name) => storeConfirm(id, name, showToast),
@@ -1789,6 +1924,7 @@ export default function Bookings() {
         onCompleted={handleCompleted}
         onNotesSaved={handleNotesSaved}
         onAmountSaved={handleAmountSaved}
+        onDepositSaved={handleDepositSaved}
       />
       <AddBookingModal open={addOpen} onClose={() => setAddOpen(false)} />
       <CustomerHistory customer={customer} bookings={bookings} invoices={invoices} onClose={() => setCustomer(null)} />
@@ -1899,8 +2035,17 @@ export default function Bookings() {
         }}
       >
         <SegmentedControl
-          options={["All", "Pending", "Confirmed", "Reschedule", "Cancelled", "Completed", "Rejected"]}
-          value={filter}
+          options={[
+            "All",
+            "Pending",
+            "Confirmed",
+            "Reschedule",
+            "No-show",
+            "Cancelled",
+            "Completed",
+            "Rejected",
+          ]}
+          value={filter === "Unpaid aging" ? "All" : filter}
           onChange={(v) => {
             setFilter(v);
             setFocusedRow(-1);
@@ -1933,6 +2078,45 @@ export default function Bookings() {
           </div>
           <span className="risk-banner__action" style={{ color: t.risk }}>Needs attention</span>
         </div>
+      )}
+
+      {unpaidAgingCount > 0 && (
+        <button
+          type="button"
+          onClick={() => {
+            setFilter("Unpaid aging");
+            setFocusedRow(-1);
+          }}
+          style={{
+            width: "100%",
+            marginBottom: 20,
+            background: t.cardBg2 || t.pageBg,
+            border: `1px solid ${t.border}`,
+            borderRadius: 14,
+            padding: "14px 20px",
+            cursor: "pointer",
+            textAlign: "left",
+            fontFamily: "inherit",
+            color: "inherit",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+          }}
+        >
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 500, color: t.textPrimary }}>
+              {unpaidAgingCount} unpaid booking{unpaidAgingCount === 1 ? "" : "s"} past session date
+            </div>
+            <div style={{ fontSize: 12, color: t.textMuted, marginTop: 4 }}>
+              Chase money — Unpaid / Half / Onsite after the pitch day
+              {filter === "Unpaid aging" ? " (filter on)" : ""}
+            </div>
+          </div>
+          <span style={{ color: t.textSecondary, fontSize: 13, fontWeight: 600, whiteSpace: "nowrap" }}>
+            View →
+          </span>
+        </button>
       )}
 
       {filtered.length === 0 ? (

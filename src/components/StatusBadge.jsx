@@ -53,6 +53,13 @@ const SOFT = {
     dot: "#6366F1",
     icon: "dot",
   },
+  "No-show": {
+    bg: "#FFF7ED",
+    color: "#9A3412",
+    ring: "#FED7AA",
+    dot: "#EA580C",
+    icon: "x",
+  },
   Unpaid: {
     bg: "#FFFBEB",
     color: "#B45309",

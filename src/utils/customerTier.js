@@ -1,6 +1,6 @@
 import { phonesMatch } from "./format";
 
-const EXCLUDED_STATUSES = new Set(["Cancelled", "Rejected"]);
+const EXCLUDED_STATUSES = new Set(["Cancelled", "Rejected", "No-show"]);
 const VIP_PAID_THRESHOLD = 15000;
 const AT_RISK_DAYS = 60;
 

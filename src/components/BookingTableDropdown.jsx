@@ -37,6 +37,7 @@ export const BOOKING_STATUS_OPTIONS = [
   { value: "Rejected", label: "Rejected" },
   { value: "Completed", label: "Completed" },
   { value: "Reschedule", label: "Reschedule" },
+  { value: "No-show", label: "No-show" },
 ];
 
 const STATUS_SEMANTIC = {
@@ -46,6 +47,7 @@ const STATUS_SEMANTIC = {
   Rejected: { dot: "#E11D48" },
   Completed: { dot: "#059669" },
   Reschedule: { dot: "#6366F1" },
+  "No-show": { dot: "#9A3412" },
 };
 
 const STATUS_SEMANTIC_DARK = {
@@ -55,6 +57,7 @@ const STATUS_SEMANTIC_DARK = {
   Rejected: { dot: "#F43F5E" },
   Completed: { dot: "#34D399" },
   Reschedule: { dot: "#818CF8" },
+  "No-show": { dot: "#FB923C" },
 };
 
 function resolveStatusDot(status, dark) {
