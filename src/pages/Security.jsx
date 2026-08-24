@@ -28,6 +28,7 @@ import {
   ShieldAlert,
 } from "lucide-react";
 import { useSecurity } from "../context/SecurityContext";
+import TotpSetupPanel from "../components/TotpSetupPanel";
 import {
   useTheme,
   cardStyle,
@@ -1398,7 +1399,7 @@ export default function Security() {
               />
               <AuthCard
                 icon={ShieldCheck}
-                title="Two-Factor Authentication"
+                title="Quick PIN (idle lock)"
                 status={pinConfigured ? "Enabled" : "Not enabled"}
                 statusTone={pinConfigured ? "success" : "warning"}
                 description={
@@ -1444,6 +1445,9 @@ export default function Security() {
                 description="WhatsApp alerts and customer messaging use your configured business number."
                 primary={{ label: "Configure", onClick: () => navigate("/settings") }}
               />
+            </div>
+            <div style={{ marginTop: 16 }}>
+              <TotpSetupPanel />
             </div>
           </section>
 

@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback, useRef } f
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "./ThemeContext";
-import { getPinStatus } from "../api";
+import { getPinStatus, logout as apiLogout } from "../api";
 import PinLockOverlay from "../components/PinLockOverlay";
 
 const SecurityContext = createContext();
@@ -74,6 +74,7 @@ export function SecurityProvider({ children }) {
     localStorage.removeItem("auth");
     localStorage.removeItem("slippy_token");
     localStorage.removeItem("slippy_session");
+    apiLogout().catch(() => {});
     clearTimeout(timeoutRef.current);
     clearTimeout(warnRef.current);
     clearInterval(countRef.current);

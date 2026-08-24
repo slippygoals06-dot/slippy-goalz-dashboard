@@ -4,6 +4,7 @@ import { ChevronDown, LogOut, Settings, Moon, Sun } from "lucide-react";
 import { useTheme } from "../../context/ThemeContext";
 import { BUSINESS_NAME } from "../../constants/brand";
 import { clearSession } from "../../constants/permissions";
+import { logout as apiLogout } from "../../api";
 import { SHELL, hoverFill, iconButtonStyle } from "./shellTokens";
 
 /**
@@ -36,7 +37,7 @@ export default function ProfileMenu({ compact = false, align = "left" }) {
     localStorage.removeItem("auth");
     localStorage.removeItem("slippy_token");
     clearSession();
-    navigate("/login");
+    apiLogout().finally(() => navigate("/login"));
   };
 
   const menu = open && (

@@ -90,6 +90,7 @@ const apiCall = async (path, options = {}) => {
   const token = localStorage.getItem("slippy_token");
   const res = await fetch(`${API}${path}`, {
     ...options,
+    credentials: "include",
     headers: {
       "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),

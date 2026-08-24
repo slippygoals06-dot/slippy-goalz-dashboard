@@ -1,11 +1,33 @@
 import { API_URL } from "./config";
 
-// Store token in localStorage
 const getToken = () => localStorage.getItem("slippy_token");
-const setToken = (token) => localStorage.setItem("slippy_token", token);
+const setToken = (token) => {
+  if (token) localStorage.setItem("slippy_token", token);
+  else localStorage.removeItem("slippy_token");
+};
+const clearToken = () => localStorage.removeItem("slippy_token");
 
-// Base fetch with auth
-async function apiFetch(endpoint, options = {}) {
+let refreshPromise = null;
+
+async function tryRefresh() {
+  if (!refreshPromise) {
+    refreshPromise = fetch(`${API_URL}/auth/refresh`, {
+      method: "POST",
+      credentials: "include",
+    })
+      .then(async (res) => {
+        if (!res.ok) throw new Error("refresh failed");
+        return res.json();
+      })
+      .finally(() => {
+        refreshPromise = null;
+      });
+  }
+  return refreshPromise;
+}
+
+// Base fetch with cookie credentials + optional Bearer (dev) + one refresh retry
+async function apiFetch(endpoint, options = {}, _retried = false) {
   const token = getToken();
   const isForm = typeof FormData !== "undefined" && options.body instanceof FormData;
   const headers = {
@@ -13,13 +35,24 @@ async function apiFetch(endpoint, options = {}) {
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...(options.headers || {}),
   };
-  // Let the browser set multipart boundary
   if (isForm && headers["Content-Type"]) delete headers["Content-Type"];
 
   const res = await fetch(`${API_URL}${endpoint}`, {
     ...options,
+    credentials: "include",
     headers,
   });
+
+  if (res.status === 401 && !_retried && !String(endpoint).startsWith("/auth/login")) {
+    try {
+      await tryRefresh();
+      return apiFetch(endpoint, options, true);
+    } catch {
+      clearToken();
+      localStorage.removeItem("auth");
+    }
+  }
+
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     const detail = err.detail;
@@ -43,9 +76,43 @@ export async function login(username, password) {
     method: "POST",
     body: JSON.stringify({ username, password }),
   });
-  setToken(data.access_token);
+  if (data.access_token) setToken(data.access_token);
+  else clearToken();
   return data;
 }
+
+export async function login2fa(preAuth, code) {
+  const data = await apiFetch("/auth/login/2fa", {
+    method: "POST",
+    body: JSON.stringify({ pre_auth: preAuth, code }),
+  });
+  if (data.access_token) setToken(data.access_token);
+  else clearToken();
+  return data;
+}
+
+export async function logout() {
+  try {
+    await apiFetch("/auth/logout", { method: "POST", body: "{}" });
+  } catch {
+    /* ignore */
+  }
+  clearToken();
+  localStorage.removeItem("auth");
+}
+
+export const getTotpStatus = () => apiFetch("/auth/2fa/status");
+export const setupTotp = () => apiFetch("/auth/2fa/setup", { method: "POST", body: "{}" });
+export const enableTotp = (password, code) =>
+  apiFetch("/auth/2fa/enable", {
+    method: "POST",
+    body: JSON.stringify({ password, code }),
+  });
+export const disableTotp = (password, code) =>
+  apiFetch("/auth/2fa/disable", {
+    method: "POST",
+    body: JSON.stringify({ password, code }),
+  });
 
 // Bookings
 export const getBookings = () => apiFetch("/bookings/");
@@ -65,16 +132,12 @@ export const deleteBooking = (id) =>
 export const listBookingAttachments = (bookingId) =>
   apiFetch(`/bookings/${encodeURIComponent(bookingId)}/attachments`);
 
-export const uploadBookingAttachment = (bookingId, file, { token } = {}) => {
+export const uploadBookingAttachment = (bookingId, file) => {
   const form = new FormData();
   form.append("file", file);
-  const headers = {};
-  const auth = token || getToken();
-  if (auth) headers.Authorization = `Bearer ${auth}`;
   return apiFetch(`/bookings/${encodeURIComponent(bookingId)}/attachments`, {
     method: "POST",
     body: form,
-    headers,
   });
 };
 
@@ -84,7 +147,7 @@ export async function uploadBookingAttachmentPublic(bookingId, file) {
   form.append("file", file);
   const res = await fetch(
     `${API_URL}/bookings/${encodeURIComponent(bookingId)}/attachments`,
-    { method: "POST", body: form }
+    { method: "POST", body: form, credentials: "omit" }
   );
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
@@ -167,6 +230,7 @@ export const updateInvoiceStatus = (id, status) =>
 async function fetchInvoicePdfBlob(invoiceId) {
   const token = getToken();
   const res = await fetch(`${API_URL}/invoices/${invoiceId}/pdf`, {
+    credentials: "include",
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
   if (!res.ok) throw new Error(`PDF download failed (${res.status})`);
@@ -256,6 +320,8 @@ export const connectWhatsApp = (phoneNumberId, accessToken) =>
     }),
   });
 
+export const listIntegrations = () => apiFetch("/integrations/");
+
 export const receiveParts = (body) =>
   apiFetch("/parts/receive", {
     method: "POST",
@@ -268,7 +334,7 @@ export const installParts = (body) =>
     body: JSON.stringify(body),
   });
 
-// Staff management (matches backend /auth/staff endpoints)
+// Staff
 export const getStaffMembers = () => apiFetch("/auth/staff");
 export const createStaffMember = (data) =>
   apiFetch("/auth/staff", { method: "POST", body: JSON.stringify(data) });
@@ -282,7 +348,8 @@ export const updateStaffPermissions = (username, permissions) =>
     method: "POST",
     body: JSON.stringify({ permissions }),
   });
+export const setStaffPermissions = updateStaffPermissions;
 export const getMe = () => apiFetch("/auth/me");
 export const getStaffSetupSql = () => apiFetch("/auth/staff/setup-sql");
 
-export { API_URL };
+export { API_URL, apiFetch, getToken, setToken, clearToken };

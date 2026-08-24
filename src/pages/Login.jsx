@@ -65,11 +65,52 @@ export default function Login() {
   const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [preAuth, setPreAuth] = useState("");
+  const [totpCode, setTotpCode] = useState("");
   const navigate = useNavigate();
   const { checkLoginAttempt, recordLoginSuccess, recordLoginFail } = useSecurity();
 
+  const finishLogin = async (data) => {
+    if (data.access_token) {
+      localStorage.setItem("slippy_token", data.access_token);
+    } else {
+      localStorage.removeItem("slippy_token");
+    }
+    localStorage.setItem("auth", "true");
+    recordLoginSuccess(data.username || username);
+    const { saveSession, canAccessPath } = await import("../constants/permissions");
+    const session = saveSession({
+      username: data.username,
+      role: data.role,
+      permissions: data.permissions,
+    });
+    const home =
+      ["/", "/bookings", "/slots", "/chats", "/settings"].find((p) =>
+        canAccessPath(p, session)
+      ) || "/settings";
+    navigate(home);
+  };
+
   const handleLogin = async (e) => {
     e?.preventDefault?.();
+
+    if (preAuth) {
+      if (!totpCode.trim()) {
+        setError("Enter your authenticator code");
+        return;
+      }
+      setLoading(true);
+      setError("");
+      try {
+        const { login2fa } = await import("../api");
+        const data = await login2fa(preAuth, totpCode.trim());
+        await finishLogin(data);
+      } catch (err) {
+        setError(err.message || "Invalid authenticator code");
+        setLoading(false);
+      }
+      return;
+    }
 
     if (!username || !password) {
       setError("Please fill in all fields");
@@ -87,6 +128,7 @@ export default function Login() {
     try {
       const res = await fetch(`${API_URL}/auth/login`, {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
       });
@@ -105,20 +147,13 @@ export default function Login() {
       }
 
       const data = await res.json();
-      localStorage.setItem("slippy_token", data.access_token);
-      localStorage.setItem("auth", "true");
-      recordLoginSuccess(username);
-      const { saveSession, canAccessPath } = await import("../constants/permissions");
-      const session = saveSession({
-        username: data.username,
-        role: data.role,
-        permissions: data.permissions,
-      });
-      const home =
-        ["/", "/bookings", "/slots", "/chats", "/settings"].find((p) =>
-          canAccessPath(p, session)
-        ) || "/settings";
-      navigate(home);
+      if (data.requires_2fa && data.pre_auth) {
+        setPreAuth(data.pre_auth);
+        setError("");
+        setLoading(false);
+        return;
+      }
+      await finishLogin(data);
     } catch {
       setError("Connection error. Please try again.");
       setLoading(false);
@@ -733,9 +768,13 @@ export default function Login() {
               {BRAND_INITIAL}
             </div>
 
-            <h2 className="login-welcome login-enter login-enter-a2">Welcome back</h2>
+            <h2 className="login-welcome login-enter login-enter-a2">
+              {preAuth ? "Two-factor code" : "Welcome back"}
+            </h2>
             <p className="login-welcome-sub login-enter login-enter-a3">
-              Sign in to continue managing your business.
+              {preAuth
+                ? "Enter the 6-digit code from your authenticator app."
+                : "Sign in to continue managing your business."}
             </p>
 
             <form className="login-form" onSubmit={handleLogin} noValidate>
@@ -745,6 +784,8 @@ export default function Login() {
                 </div>
               )}
 
+              {!preAuth ? (
+                <>
               <div className="login-enter login-enter-a4">
                 <label className="login-label" htmlFor="login-username">
                   Username
@@ -800,6 +841,50 @@ export default function Login() {
                   </button>
                 </div>
               </div>
+                </>
+              ) : (
+              <div className="login-enter login-enter-a4">
+                <label className="login-label" htmlFor="login-totp">
+                  Authenticator code
+                </label>
+                <div className="login-field">
+                  <input
+                    id="login-totp"
+                    className={`login-input${inputError ? " has-error" : ""}`}
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    value={totpCode}
+                    placeholder="123456"
+                    disabled={loading}
+                    autoFocus
+                    onChange={(e) => {
+                      setTotpCode(e.target.value.replace(/\D/g, "").slice(0, 8));
+                      setError("");
+                    }}
+                  />
+                </div>
+                <button
+                  type="button"
+                  style={{
+                    marginTop: 10,
+                    background: "none",
+                    border: "none",
+                    color: "var(--login-muted)",
+                    fontSize: 13,
+                    cursor: "pointer",
+                    padding: 0,
+                  }}
+                  onClick={() => {
+                    setPreAuth("");
+                    setTotpCode("");
+                    setError("");
+                  }}
+                >
+                  ← Back to password
+                </button>
+              </div>
+              )}
 
               <button
                 type="submit"
@@ -811,6 +896,8 @@ export default function Login() {
                     <Loader2 size={18} strokeWidth={2} className="login-spinner" />
                     Verifying…
                   </>
+                ) : preAuth ? (
+                  "Verify code"
                 ) : (
                   "Sign in"
                 )}

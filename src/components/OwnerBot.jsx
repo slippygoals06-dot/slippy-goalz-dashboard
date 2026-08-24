@@ -57,8 +57,9 @@ export default function OwnerBot() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("slippy_token")}`,
+          Authorization: `Bearer ${localStorage.getItem("slippy_token") || ""}`,
         },
+        credentials: "include",
         body: JSON.stringify({ messages: history, context: { bookings, slots, leads, revenue } }),
       });
 
