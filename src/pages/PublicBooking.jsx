@@ -10,10 +10,10 @@ import {
   MAX_PLAYERS,
 } from "../utils/bookingFields";
 import { API_URL as API } from "../config";
-import { supabase } from "../lib/supabase";
 import imageCompression from "browser-image-compression";
 import { Upload, X as XIcon, Loader2 } from "lucide-react";
 import { idempotencyKeyForIntent } from "../utils/idempotency";
+import { uploadBookingAttachmentPublic } from "../api";
 
 function formatDateLabel(iso) {
   if (!iso) return "";
@@ -204,20 +204,7 @@ export default function PublicBooking() {
           maxWidthOrHeight: 1600,
           useWebWorker: true,
         });
-        const ext = rawFile.name.split(".").pop()?.toLowerCase() || "jpg";
-        const path = `${bookingId}/${crypto.randomUUID()}.${ext}`;
-        const { error: upErr } = await supabase.storage
-          .from("booking-images")
-          .upload(path, compressed, { contentType: compressed.type, upsert: false });
-        if (upErr) throw upErr;
-        await supabase.from("booking_attachments").insert({
-          booking_id: bookingId,
-          uploaded_by_role: "customer",
-          file_path: path,
-          file_type: "image",
-          mime_type: compressed.type,
-          size_bytes: compressed.size,
-        });
+        await uploadBookingAttachmentPublic(bookingId, compressed);
       } catch (err) {
         console.error("Image upload failed:", err);
       }
@@ -272,8 +259,9 @@ export default function PublicBooking() {
         throw new Error(detail || `Server returned ${res.status}`);
       }
       const result = await res.json();
-      if (selectedImages.length > 0 && result?.id) {
-        await uploadImages(result.id);
+      const attachId = result?.id || result?.["Booking ID"];
+      if (selectedImages.length > 0 && attachId) {
+        await uploadImages(attachId);
       }
       setDone(true);
     } catch (err) {

@@ -7,13 +7,18 @@ const setToken = (token) => localStorage.setItem("slippy_token", token);
 // Base fetch with auth
 async function apiFetch(endpoint, options = {}) {
   const token = getToken();
+  const isForm = typeof FormData !== "undefined" && options.body instanceof FormData;
+  const headers = {
+    ...(isForm ? {} : { "Content-Type": "application/json" }),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(options.headers || {}),
+  };
+  // Let the browser set multipart boundary
+  if (isForm && headers["Content-Type"]) delete headers["Content-Type"];
+
   const res = await fetch(`${API_URL}${endpoint}`, {
     ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...options.headers,
-    },
+    headers,
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
@@ -28,6 +33,7 @@ async function apiFetch(endpoint, options = {}) {
     error.status = res.status;
     throw error;
   }
+  if (res.status === 204) return null;
   return res.json();
 }
 
@@ -55,6 +61,38 @@ export const updateBooking = (id, data) =>
   apiFetch(`/bookings/${id}`, { method: "PUT", body: JSON.stringify(data) });
 export const deleteBooking = (id) =>
   apiFetch(`/bookings/${id}`, { method: "DELETE" });
+
+export const listBookingAttachments = (bookingId) =>
+  apiFetch(`/bookings/${encodeURIComponent(bookingId)}/attachments`);
+
+export const uploadBookingAttachment = (bookingId, file, { token } = {}) => {
+  const form = new FormData();
+  form.append("file", file);
+  const headers = {};
+  const auth = token || getToken();
+  if (auth) headers.Authorization = `Bearer ${auth}`;
+  return apiFetch(`/bookings/${encodeURIComponent(bookingId)}/attachments`, {
+    method: "POST",
+    body: form,
+    headers,
+  });
+};
+
+/** Public (no JWT) image upload right after booking create */
+export async function uploadBookingAttachmentPublic(bookingId, file) {
+  const form = new FormData();
+  form.append("file", file);
+  const res = await fetch(
+    `${API_URL}/bookings/${encodeURIComponent(bookingId)}/attachments`,
+    { method: "POST", body: form }
+  );
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    const detail = typeof err.detail === "string" ? err.detail : `Upload failed (${res.status})`;
+    throw new Error(detail);
+  }
+  return res.json();
+}
 
 // Customers (permanent identity)
 export const getCustomer = (id) =>

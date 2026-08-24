@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Upload, X, Image as ImageIcon, Film, ZoomIn, Play, Loader2 } from "lucide-react";
-import { supabase } from "../lib/supabase";
+import { listBookingAttachments, uploadBookingAttachment } from "../api";
 import { useTheme, secondaryBtnStyle } from "../context/ThemeContext";
 import { useToast } from "../context/ToastContext";
 import imageCompression from "browser-image-compression";
@@ -12,7 +12,6 @@ const VIDEO_MIMES = ["video/mp4", "video/quicktime"];
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 const MAX_VIDEO_SIZE = 100 * 1024 * 1024;
 const MAX_IMAGES = 5;
-const SIGNED_URL_EXPIRY = 3600;
 
 const COMPRESS_OPTS = {
   maxSizeMB: 1,
@@ -112,11 +111,7 @@ function Lightbox({ src, onClose }) {
 }
 
 /**
- * @param {object} props
- * @param {string} props.bookingId - UUID of the booking
- * @param {"customer"|"staff"|"manager"|"owner"} props.role - uploader role
- * @param {boolean} [props.allowVideo] - allow video uploads (staff/manager/owner only)
- * @param {boolean} [props.compact] - compact mode for customer form
+ * Attachments via FastAPI (service role) — never writes with the anon Supabase key.
  */
 export default function BookingAttachments({ bookingId, role, allowVideo = false, compact = false }) {
   const { theme: t } = useTheme();
@@ -133,26 +128,8 @@ export default function BookingAttachments({ bookingId, role, allowVideo = false
     if (!bookingId) return;
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("booking_attachments")
-        .select("*")
-        .eq("booking_id", bookingId)
-        .order("created_at", { ascending: true });
-      if (error) throw error;
-
-      const withUrls = await Promise.all(
-        (data || []).map(async (att) => {
-          const bucket = att.file_type === "video" ? "booking-videos" : "booking-images";
-          const { data: signed, error: signErr } = await supabase.storage
-            .from(bucket)
-            .createSignedUrl(att.file_path, SIGNED_URL_EXPIRY);
-          return {
-            ...att,
-            url: signErr ? null : signed?.signedUrl,
-          };
-        })
-      );
-      setAttachments(withUrls);
+      const data = await listBookingAttachments(bookingId);
+      setAttachments(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error("Failed to load attachments", err);
     } finally {
@@ -216,35 +193,12 @@ export default function BookingAttachments({ bookingId, role, allowVideo = false
         if (fileType === "image") {
           setUploadProgress(10);
           file = await imageCompression(rawFile, COMPRESS_OPTS);
-          setUploadProgress(30);
+          setUploadProgress(40);
+        } else {
+          setUploadProgress(20);
         }
 
-        const ext = rawFile.name.split(".").pop()?.toLowerCase() || "bin";
-        const path = `${bookingId}/${crypto.randomUUID()}.${ext}`;
-        const bucket = fileType === "video" ? "booking-videos" : "booking-images";
-
-        setUploadProgress(fileType === "image" ? 40 : 10);
-
-        const { error: uploadErr } = await supabase.storage
-          .from(bucket)
-          .upload(path, file, {
-            contentType: file.type,
-            upsert: false,
-          });
-
-        if (uploadErr) throw uploadErr;
-        setUploadProgress(80);
-
-        const { error: insertErr } = await supabase.from("booking_attachments").insert({
-          booking_id: bookingId,
-          uploaded_by_role: role,
-          file_path: path,
-          file_type: fileType,
-          mime_type: file.type,
-          size_bytes: file.size,
-        });
-
-        if (insertErr) throw insertErr;
+        await uploadBookingAttachment(bookingId, file);
         setUploadProgress(100);
         showToast(`${fileType === "image" ? "Image" : "Video"} uploaded`);
         await fetchAttachments();
@@ -278,179 +232,141 @@ export default function BookingAttachments({ bookingId, role, allowVideo = false
     background: t.name === "dark" ? "rgba(255,255,255,0.02)" : "rgba(15,17,21,0.02)",
     textAlign: "center",
     cursor: uploading ? "wait" : "pointer",
-    transition: "border-color 150ms ease",
   };
 
   return (
     <div>
-      {lightboxSrc && <Lightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />}
-
       <input
         ref={fileRef}
         type="file"
-        hidden
+        style={{ display: "none" }}
         onChange={(e) => {
-          handleFiles(Array.from(e.target.files || []));
+          handleFiles(e.target.files);
           e.target.value = "";
         }}
       />
 
-      {/* Upload zone */}
       <div
-        style={dropZoneStyle}
+        role="button"
+        tabIndex={0}
         onClick={() => !uploading && openPicker()}
-        onDragOver={(e) => {
-          e.preventDefault();
-          e.currentTarget.style.borderColor = t.accent;
-        }}
-        onDragLeave={(e) => {
-          e.currentTarget.style.borderColor = t.border;
-        }}
-        onDrop={(e) => {
-          e.preventDefault();
-          e.currentTarget.style.borderColor = t.border;
-          if (!uploading) handleFiles(Array.from(e.dataTransfer.files));
-        }}
+        onKeyDown={(e) => e.key === "Enter" && !uploading && openPicker()}
+        style={dropZoneStyle}
       >
         {uploading ? (
-          <div>
-            <Loader2
-              size={20}
-              strokeWidth={2}
-              color={t.accent}
-              style={{ animation: "spin 1s linear infinite" }}
-            />
-            <div style={{ fontSize: 13, color: t.textSecondary, marginTop: 8 }}>
-              Uploading {uploadName}…
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+            <Loader2 size={22} style={{ color: t.accent, animation: "spin 1s linear infinite" }} />
+            <div style={{ fontSize: 13, color: t.textSecondary }}>{uploadName || "Uploading…"}</div>
+            <div style={{ width: "80%" }}>
+              <ProgressBar progress={uploadProgress} t={t} />
             </div>
-            <ProgressBar progress={uploadProgress} t={t} />
-            <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
           </div>
         ) : (
-          <div>
-            <Upload size={20} strokeWidth={1.75} color={t.textMuted} />
-            <div style={{ fontSize: 13, color: t.textSecondary, marginTop: 8 }}>
-              {compact ? "Tap to add photos" : "Drop files or click to upload"}
+          <>
+            <Upload size={22} style={{ color: t.textMuted, marginBottom: 8 }} />
+            <div style={{ fontSize: 13, color: t.textSecondary, fontWeight: 500 }}>
+              Upload {allowVideo ? "images or video" : "images"}
             </div>
-            <div style={{ fontSize: 11, color: t.textMuted, marginTop: 4 }}>
-              {allowVideo
-                ? `Images (jpg/png/webp, max 5 MB each, up to ${MAX_IMAGES}) · Video (mp4/mov, max 100 MB, 1)`
-                : `Images only · jpg/png/webp · max 5 MB each · up to ${MAX_IMAGES}`}
+            <div style={{ fontSize: 12, color: t.textMuted, marginTop: 4 }}>
+              Via secure API · max {MAX_IMAGES} images{allowVideo ? " · 1 video" : ""}
             </div>
-          </div>
+          </>
         )}
       </div>
 
-      {/* Image thumbnails */}
+      {loading && (
+        <div style={{ marginTop: 12, fontSize: 12, color: t.textMuted }}>Loading…</div>
+      )}
+
       {images.length > 0 && (
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: compact ? "repeat(3, 1fr)" : "repeat(4, 1fr)",
+            gridTemplateColumns: "repeat(auto-fill, minmax(88px, 1fr))",
             gap: 8,
-            marginTop: 12,
+            marginTop: 14,
           }}
         >
           {images.map((att) => (
-            <div
+            <button
               key={att.id}
+              type="button"
+              onClick={() => att.url && setLightboxSrc(att.url)}
               style={{
                 position: "relative",
                 aspectRatio: "1",
                 borderRadius: 10,
                 overflow: "hidden",
                 border: `1px solid ${t.border}`,
-                cursor: att.url ? "pointer" : "default",
-                background: t.name === "dark" ? "rgba(255,255,255,0.04)" : "rgba(15,17,21,0.04)",
+                padding: 0,
+                cursor: att.url ? "zoom-in" : "default",
+                background: t.cardBg2,
               }}
-              onClick={() => att.url && setLightboxSrc(att.url)}
             >
               {att.url ? (
-                <img
-                  src={att.url}
-                  alt=""
-                  loading="lazy"
-                  style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-                />
+                <img src={att.url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
               ) : (
-                <div
+                <ImageIcon size={20} style={{ color: t.textMuted }} />
+              )}
+              {att.url && (
+                <span
                   style={{
-                    width: "100%",
-                    height: "100%",
+                    position: "absolute",
+                    right: 4,
+                    bottom: 4,
+                    width: 22,
+                    height: 22,
+                    borderRadius: 6,
+                    background: "rgba(0,0,0,0.45)",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                   }}
                 >
-                  <ImageIcon size={20} color={t.textMuted} />
-                </div>
+                  <ZoomIn size={12} color="#fff" />
+                </span>
               )}
-              <div
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  background: "rgba(0,0,0,0.25)",
-                  opacity: 0,
-                  transition: "opacity 150ms ease",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.opacity = 1; }}
-                onMouseLeave={(e) => { e.currentTarget.style.opacity = 0; }}
-              >
-                <ZoomIn size={18} color="#fff" />
-              </div>
-            </div>
+            </button>
           ))}
         </div>
       )}
 
-      {/* Video */}
-      {videos.map((att) => (
-        <div
-          key={att.id}
-          style={{
-            marginTop: 12,
-            borderRadius: 10,
-            overflow: "hidden",
-            border: `1px solid ${t.border}`,
-            background: "#000",
-          }}
-        >
-          {att.url ? (
-            <video
-              controls
-              preload="metadata"
-              style={{ width: "100%", display: "block", maxHeight: 300 }}
-            >
-              <source src={att.url} type={att.mime_type} />
-            </video>
-          ) : (
-            <div
+      {videos.length > 0 && (
+        <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
+          {videos.map((att) => (
+            <a
+              key={att.id}
+              href={att.url || undefined}
+              target="_blank"
+              rel="noreferrer"
               style={{
-                height: 120,
                 display: "flex",
                 alignItems: "center",
-                justifyContent: "center",
-                gap: 8,
-                color: "#888",
+                gap: 10,
+                padding: "10px 12px",
+                borderRadius: 10,
+                border: `1px solid ${t.border}`,
+                background: t.cardBg2,
+                color: t.textPrimary,
+                textDecoration: "none",
                 fontSize: 13,
               }}
             >
-              <Film size={18} />
-              Video unavailable
-            </div>
-          )}
-        </div>
-      ))}
-
-      {/* Loading state */}
-      {loading && attachments.length === 0 && (
-        <div style={{ fontSize: 12, color: t.textMuted, marginTop: 10, textAlign: "center" }}>
-          Loading attachments…
+              <Film size={16} style={{ color: t.textMuted }} />
+              <span style={{ flex: 1 }}>Video attachment</span>
+              <Play size={14} style={{ color: t.textMuted }} />
+            </a>
+          ))}
         </div>
       )}
+
+      {!loading && attachments.length === 0 && (
+        <div style={{ marginTop: 10, fontSize: 12, color: t.textMuted }}>No attachments yet</div>
+      )}
+
+      {lightboxSrc && <Lightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />}
+      {/* role unused after API proxy — keep prop for call-site compat */}
+      <span style={{ display: "none" }}>{role}</span>
     </div>
   );
 }

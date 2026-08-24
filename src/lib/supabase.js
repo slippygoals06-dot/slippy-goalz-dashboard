@@ -1,6 +1,21 @@
-import { createClient } from "@supabase/supabase-js";
+/**
+ * DEPRECATED — do not use for reads/writes.
+ * All data access goes through the FastAPI backend (service role).
+ * Kept only so accidental imports fail loudly in development.
+ */
+export function getSupabase() {
+  throw new Error(
+    "Direct Supabase anon client is disabled. Use the Slippy Goalz API instead."
+  );
+}
 
-export const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
+export const supabase = new Proxy(
+  {},
+  {
+    get() {
+      throw new Error(
+        "Direct Supabase anon client is disabled. Use the Slippy Goalz API instead."
+      );
+    },
+  }
 );
